@@ -50,7 +50,7 @@ namespace cirbo::minimization::genetic
                 }
             }
 
-            return initial_circuit;
+            return std::make_unique<CircuitT>(initial_circuit);
         }
     };
 }
