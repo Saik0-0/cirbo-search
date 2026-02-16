@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/structures/mutable_circuit.hpp"
+#include <algorithm>
 
 namespace cirbo::minimization::genetic
 {
@@ -32,7 +33,7 @@ namespace cirbo::minimization::genetic
                 std::vector<double> fitness;
                 fitness.reserve(population.size());
 
-                for (count auto& circuit : population)
+                for (const auto& circuit : population)
                 {
                     fitness.push_back(parameters.temp_fitness_value);
                 }
@@ -46,7 +47,7 @@ namespace cirbo::minimization::genetic
                 
                 if (fitness[best_circuit_idx] == parameters.ideal_fitness_value)
                 {
-                    return population[best_circuit_idx];
+                    return std::make_unique<CircuitT>(*population[best_circuit_idx]);
                 }
             }
 
