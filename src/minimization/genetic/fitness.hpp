@@ -72,9 +72,10 @@ class FitnessFunction
 
     std::vector<GateState> getOutputValues(const CircuitT& circuit, const VectorAssignment<>& input_assigment, const GateIdContainer& outputs) const
     {
-        auto result_assigment = std::make_unique<VectorAssignment<>>(circuit.getNumberOfGates());
+        // auto result_assigment = std::make_unique<VectorAssignment<>>(circuit.getNumberOfGates());
         const ICircuit& base_circuit = static_cast<const ICircuit&>(circuit);
-        const_cast<ICircuit&>(base_circuit).evaluateCircuit_(outputs, input_assigment, result_assigment.get());
+        // const_cast<ICircuit&>(base_circuit).evaluateCircuit_(outputs, input_assigment, result_assigment.get());
+        auto result_assigment = base_circuit.evaluateCircuit<VectorAssignment<>>(input_assigment);
         std::vector<GateState> output_states;
         output_states.reserve(outputs.size());
         for (GateId output_id : outputs)
