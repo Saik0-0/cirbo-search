@@ -12,7 +12,6 @@ namespace cirbo::minimization::genetic
         size_t population_size = 5;
         double crossover_rate = 0.0;
         double mutation_rate = 0.0;
-        int temp_fitness_value = 1;
         int ideal_fitness_value = 1;
 
     };
@@ -34,7 +33,7 @@ namespace cirbo::minimization::genetic
 
             for (size_t generation_count = 0; generation_count < parameters.generations; ++generation_count)
             {
-                std::vector<size_t> fitness_results;
+                std::vector<double> fitness_results;
                 fitness_results.reserve(population.size());
 
                 for (const auto& circuit : population)

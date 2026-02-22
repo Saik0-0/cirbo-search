@@ -26,7 +26,7 @@ class FitnessFunction
         initialEvaluateAllInputs();
     }
 
-    size_t evaluateFitness(const CircuitT& test_circuit) const
+    double evaluateFitness(const CircuitT& test_circuit) const
     {
         size_t correct_outputs = 0;
         auto test_result_states = evaluateCircuitOutputs(test_circuit, test_circuit.getOutputGates());
@@ -38,7 +38,7 @@ class FitnessFunction
             }
         }
 
-        return correct_outputs;
+        return static_cast<double>(correct_outputs) / initial_result_states.size();
     }
 
 
