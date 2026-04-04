@@ -390,12 +390,22 @@ public:
     }
 
     /**
-     * @brief Returns the total number of logic nodes in the circuit
-     * @return GateId - number of logic nodes
-     * @post Result includes input, output, and internal nodes
+     * @brief Returns the last allocated gate identifier in the circuit.
+     * @return GateId - the next gate id value (effectively the last used index + 1).
+     * @note This value represents the upper bound of gate IDs, not the actual number of gates.
      */
     [[nodiscard]]
     GateId getNumberOfGates() const override
+    {
+        return next_gate_id;
+    }
+
+    /**
+     * @brief Returns the actual number of gates stored in the circuit.
+     * @return GateId - number of existing gates.
+     * @note Equals to the size of the internal gate container.
+     */
+    GateId getActualNumberOfGates() const
     {
         return gates.size();
     }
@@ -531,6 +541,27 @@ public:
     {
         gates.at(new_user_gate).addOperand(new_operand_gate);
         gates.at(new_operand_gate).addUser(new_user_gate);
+    }
+
+    void replaceOperand(GateId gate_id, GateId old_operand, GateId new_operand)
+    {
+        auto& node = gates.at(gate_id);
+        auto operands = node.getOperands();
+        bool found = false;
+        for (auto& op : operands)
+        {
+            if (op == old_operand && !found)
+            {
+                op = new_operand;
+                found = true;
+            }
+        }
+        if (found)
+        {
+            node.setOperands(operands);
+            gates.at(old_operand).removeIdFromUsers(gate_id, false);
+            gates.at(new_operand).addUser(gate_id);
+        }
     }
 
     /**
