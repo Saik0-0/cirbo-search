@@ -14,6 +14,9 @@ class FitnessFunction
     GateIdContainer inputs;
     GateIdContainer outputs;
     std::vector<std::vector<GateState>> initial_result_states;
+    
+    static constexpr double CORRECTNESS_WEIGHT = 1000.0;
+    static constexpr double SIZE_WEIGHT = 1.0;
 
 
     FitnessFunction(const CircuitT& circuit)
@@ -28,19 +31,45 @@ class FitnessFunction
 
     double evaluateFitness(const CircuitT& test_circuit) const
     {
-        size_t correct_outputs = 0;
-        auto test_result_states = evaluateCircuitOutputs(test_circuit, test_circuit.getOutputGates());
+        size_t correct_vectors = 0;
+
+        auto test_outputs = test_circuit.getOutputGates();
+        auto test_result_states = evaluateCircuitOutputs(test_circuit, test_outputs);
+
         for (size_t i = 0; i < initial_result_states.size(); ++i)
         {
             if (initial_result_states[i] == test_result_states[i])
             {
-                ++correct_outputs;
+                ++correct_vectors;
             }
         }
 
-        return static_cast<double>(correct_outputs) / initial_result_states.size();
+        double correctness = static_cast<double>(correct_vectors) / initial_result_states.size();
+        
+        if (correctness < 1.0)
+        {
+            return correctness * CORRECTNESS_WEIGHT;
+        }
+        
+        
+        size_t initial_size = initial_circuit.getActualNumberOfGates();
+        size_t current_size = test_circuit.getActualNumberOfGates();
+        
+        double fitness = correctness * CORRECTNESS_WEIGHT;
+        
+        if (current_size < initial_size)
+        {
+            double size_bonus = (initial_size - current_size) * SIZE_WEIGHT;
+            fitness += size_bonus;
+        }
+        else if (current_size > initial_size)
+        {
+            double size_penalty = (current_size - initial_size) * SIZE_WEIGHT;
+            fitness -= size_penalty;
+        }
+        
+        return fitness;
     }
-
 
     private:
     std::vector<std::vector<GateState>> evaluateCircuitOutputs(const CircuitT& test_circuit, const GateIdContainer& test_outputs) const
@@ -72,9 +101,7 @@ class FitnessFunction
 
     std::vector<GateState> getOutputValues(const CircuitT& circuit, const VectorAssignment<>& input_assigment, const GateIdContainer& outputs) const
     {
-        // auto result_assigment = std::make_unique<VectorAssignment<>>(circuit.getNumberOfGates());
         const ICircuit& base_circuit = static_cast<const ICircuit&>(circuit);
-        // const_cast<ICircuit&>(base_circuit).evaluateCircuit_(outputs, input_assigment, result_assigment.get());
         auto result_assigment = base_circuit.evaluateCircuit<VectorAssignment<>>(input_assigment);
         std::vector<GateState> output_states;
         output_states.reserve(outputs.size());

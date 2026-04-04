@@ -1,0 +1,571 @@
+#pragma once
+
+#include "core/structures/mutable_circuit.hpp"
+#include <random>
+#include <vector>
+#include <algorithm>
+#include <memory>
+#include <set>
+
+namespace cirbo::minimization::genetic
+{
+
+template<class CircuitT>
+class Mutation
+{
+public:
+
+    Mutation(CircuitT& circuit_)
+        : circuit(circuit_)
+    {
+        rng.seed(std::random_device{}());
+        // rng.seed(999999);
+    }
+
+    /*
+        Mutation 1
+        Replace gate type (keep valid arity)
+    */
+    void changeGateTypeMutation()
+    {
+        if (circuit.getNumberOfGates() <= 1)
+            return;
+
+        size_t gate = randomGate();
+
+        if (isInputGate(gate) || circuit.isOutputGate(gate) || circuit.getGateOperands(gate).size() == 1)
+            return;
+
+        auto operands = circuit.getGateOperands(gate);
+
+        std::vector<GateType> possible_types;
+
+        if (operands.size() == 2)
+        {
+            possible_types = {
+                GateType::AND,
+                GateType::OR,
+                GateType::XOR,
+                GateType::NAND,
+                GateType::NOR,
+                GateType::NXOR
+            };
+        }
+        else
+            return;
+
+        GateType current_type = circuit.getGateType(gate);
+
+        possible_types.erase(
+            std::remove(possible_types.begin(), possible_types.end(), current_type),
+            possible_types.end()
+        );
+
+        if (possible_types.empty())
+            return;
+
+        GateType new_type = possible_types[randomIndex(possible_types.size())];
+
+        try
+        {
+            circuit.changeGateType(gate, new_type);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    /*
+        Mutation 2
+        Reconnect operand
+    */
+    void reconnectOperandMutation()
+    {
+        if (circuit.getNumberOfGates() <= 1)
+            return;
+
+        size_t gate = randomGate();
+
+        if (isInputGate(gate) || circuit.isOutputGate(gate))
+            return;
+
+        auto operands = circuit.getGateOperands(gate);
+
+        if (operands.size() < 2)
+            return;
+
+        size_t operand_index = randomIndex(operands.size());
+        GateId old_operand = operands[operand_index];
+
+        GateId new_operand = old_operand;
+        const int max_attempts = 20;
+        for (int attempt = 0; attempt < max_attempts && new_operand == old_operand; ++attempt)
+        {
+            GateId candidate = randomOperand(gate);
+            if (!isDescendant(gate, candidate))
+                new_operand = candidate;
+        }
+
+        if (new_operand == old_operand)
+            return;
+
+        operands[operand_index] = new_operand;
+
+        try {
+            auto users = circuit.getGateUsers(gate);
+            bool was_output = circuit.isOutputGate(gate);
+            GateType type = circuit.getGateType(gate);
+
+            if (!isValidArity(type, operands))
+                return;
+
+            circuit.addGate(type, operands, was_output);
+            GateId new_gate_id = circuit.getNumberOfGates() - 1;
+
+            for (GateId user_id : users)
+            {
+                if (!gateExists(user_id))
+                    continue;
+
+                if (isDescendant(new_operand, user_id))
+                    continue;
+
+                circuit.replaceOperand(user_id, gate, new_gate_id);
+            }
+
+            if (!circuit.isOutputGate(gate) && !circuit.isGateHasUsers(gate))
+            {
+                circuit.removeGate(gate);
+            }
+        } catch (const std::exception& e) {
+        }
+    }
+
+    /*
+        Mutation 3
+        Insert NOT gate before gate
+    */
+    void insertNotMutation()
+    {
+        if (circuit.getNumberOfGates() <= 1)
+            return;
+
+        size_t gate = randomGate();
+
+        if (isInputGate(gate) || gate == 0)
+            return;
+
+        auto operands = circuit.getGateOperands(gate);
+        
+        if (operands.empty())
+            return;
+
+        try {
+            size_t operand_index = randomIndex(operands.size());
+            GateId target_operand = operands[operand_index];
+            
+            if (!gateExists(target_operand))
+                return;
+
+            
+            std::vector<GateId> not_inputs = {target_operand};
+
+            if (not_inputs.size() != 1)
+                return;
+
+            circuit.addGate(GateType::NOT, not_inputs, false);
+            GateId not_gate_id = circuit.getNumberOfGates() - 1;
+
+            operands[operand_index] = not_gate_id;
+            
+            auto users = circuit.getGateUsers(gate);
+            bool was_output = circuit.isOutputGate(gate);
+            GateType type = circuit.getGateType(gate);
+            
+            if (!isValidArity(type, operands))
+                return;
+
+            circuit.addGate(type, operands, was_output);
+            GateId new_gate_id = circuit.getNumberOfGates() - 1;
+            
+            for (GateId user_id : users)
+            {
+                try {
+                    if (gateExists(user_id) && user_id != new_gate_id) {
+                        if (!isDescendant(not_gate_id, user_id))
+                        circuit.replaceOperand(user_id, gate, new_gate_id);
+                    }
+                } catch (...) {
+                }
+            }
+            
+            if (!circuit.isOutputGate(gate) && !circuit.isGateHasUsers(gate))
+            {
+                try {
+                    circuit.removeGate(gate);
+                } catch (...) {
+                }
+            }
+        } catch (const std::exception& e) {
+        }
+    }
+
+    /*
+        Mutation 4
+        Add random gate
+    */
+    void addRandomGateMutation()
+    {
+        if (circuit.getNumberOfGates() < 2)
+            return;
+
+        try {
+            GateId existing_gate = randomGate();
+            if (!gateExists(existing_gate))
+                return;
+
+            std::vector<GateType> possible_types = {
+                GateType::AND, GateType::OR, GateType::XOR,
+                GateType::NAND, GateType::NOR, GateType::NXOR,
+                GateType::NOT
+            };
+
+            GateType new_type = possible_types[randomIndex(possible_types.size())];
+            std::vector<GateId> operands;
+
+            if (new_type == GateType::NOT)
+            {
+                GateId operand = randomOperand(existing_gate);
+                if (!gateExists(operand))
+                    return;
+                operands = {operand};
+            }
+            else
+            {
+                GateId operand1 = randomOperand(existing_gate);
+                GateId operand2 = randomOperand(existing_gate);
+
+                const int max_attempts = 10;
+                for (int attempt = 0; attempt < max_attempts && operand2 == operand1; ++attempt)
+                {
+                    operand2 = randomOperand(existing_gate);
+                }
+
+                if (!gateExists(operand1) || !gateExists(operand2))
+                    return;
+
+                operands = {operand1, operand2};
+            }
+
+            if (!isValidArity(new_type, operands))
+                return;
+
+            circuit.addGate(new_type, operands, false);
+            GateId new_gate_id = circuit.getNumberOfGates() - 1;
+
+            bool should_connect = randomDouble() < 0.5;
+            if (should_connect && circuit.getGateUsers(existing_gate).size() > 0)
+            {
+                auto users = circuit.getGateUsers(existing_gate);
+                if (!users.empty())
+                {
+                    GateId random_user = users[randomIndex(users.size())];
+
+                    if (!gateExists(random_user))
+                        return;
+
+                    if (random_user == new_gate_id)
+                        return;
+
+                    if (isDescendant(existing_gate, random_user))
+                        return;
+
+                    circuit.replaceOperand(random_user, existing_gate, new_gate_id);
+                }
+            }
+
+        } catch (const std::exception& e) {
+        }
+    }
+
+    /*
+        Mutation 5
+        Duplicate substructure (original)
+    */
+    void duplicateGateMutation()
+    {
+        if (circuit.getNumberOfGates() <= 1)
+            return;
+
+        size_t gate = randomGate();
+
+        if (isInputGate(gate))
+            return;
+
+        try {
+            auto operands = circuit.getGateOperands(gate);
+            auto type = circuit.getGateType(gate);
+
+            for (auto op : operands)
+            {
+                if (!gateExists(op))
+                    return;
+            }
+
+            if (!isValidArity(type, operands))
+                return;
+            circuit.addGate(type, operands, false);
+        } catch (const std::exception& e) {
+        }
+    }
+
+    /*
+        Mutation 6
+        Remove random gate
+    */
+    void removeRandomGateMutation()
+    {
+        if (circuit.getNumberOfGates() <= 3)
+            return;
+
+        size_t gate = randomGate();
+
+        if (isInputGate(gate) || circuit.isOutputGate(gate))
+            return;
+
+        try {
+            auto users = circuit.getGateUsers(gate);
+            if (!users.empty())
+                return;
+                
+            auto operands = circuit.getGateOperands(gate);
+            
+            circuit.removeGate(gate);
+            
+        } catch (const std::exception& e) {
+        }
+    }
+
+    /*
+        Mutation 7
+        Change output gate
+    */
+    void changeOutputGateMutation()
+    {
+        if (circuit.getNumberOfGates() <= 2)
+            return;
+
+        try {
+            auto current_outputs = circuit.getOutputGates();
+            if (current_outputs.empty())
+                return;
+                
+            size_t output_index = randomIndex(current_outputs.size());
+            GateId old_output = current_outputs[output_index];
+            
+            GateId new_output = old_output;
+            const int max_attempts = 20;
+            for (int attempt = 0; attempt < max_attempts && new_output == old_output; ++attempt)
+            {
+                GateId candidate = randomGate();
+                if (gateExists(candidate) && !circuit.isOutputGate(candidate) && !isInputGate(candidate))
+                {
+                    new_output = candidate;
+                }
+            }
+            
+            if (new_output == old_output)
+                return;
+                
+            auto output_container = circuit.getOutputGates();
+            GateIdContainer new_outputs;
+            for (GateId out_id : output_container)
+            {
+                if (out_id != old_output)
+                {
+                    new_outputs.push_back(out_id);
+                }
+            }
+            new_outputs.push_back(new_output);
+            
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wcast-qual"
+            const_cast<GateIdContainer&>(circuit.getOutputGates()) = new_outputs;
+            #pragma GCC diagnostic pop
+            
+        } catch (const std::exception& e) {
+        }
+    }
+
+    void applyRandomMutation()
+    {
+        if (circuit.getNumberOfGates() <= 3)
+            return;
+
+        std::uniform_int_distribution<int> dist(0, 6);
+        int mutation_type = dist(rng);
+
+        try
+        {
+            switch (mutation_type)
+            {
+                case 0:
+                    changeGateTypeMutation();
+                    break;
+                case 1:
+                    reconnectOperandMutation();
+                    break;
+                case 2:
+                    insertNotMutation();
+                    break;
+                case 3:
+                    addRandomGateMutation();
+                    break;
+                case 4:
+                    duplicateGateMutation();
+                    break;
+                case 5:
+                    removeRandomGateMutation();
+                    break;
+                case 6:
+                    changeOutputGateMutation();
+                    break;
+            }
+            for (size_t g = 0; g < circuit.getNumberOfGates(); ++g)
+            {
+                if (circuit.getGateType(g) == GateType::NOT)
+                {
+                    auto ops = circuit.getGateOperands(g);
+                    if (ops.size() != 1)
+                    {
+                        throw std::runtime_error("Invalid NOT gate created by mutation");
+                    }
+                }
+            }
+        }
+        catch (const std::exception& e)
+        {
+        }
+    }
+
+private:
+
+    CircuitT& circuit;
+    std::mt19937 rng;
+
+    bool isDescendant(GateId ancestor, GateId candidate) const
+    {
+        if (ancestor == candidate)
+            return true;
+
+        std::stack<GateId> stack;
+        std::unordered_set<GateId> visited;
+        stack.push(ancestor);
+
+        while (!stack.empty())
+        {
+            GateId current = stack.top();
+            stack.pop();
+
+            if (current == candidate)
+                return true;
+
+            if (!visited.insert(current).second)
+                continue;
+
+            if (!gateExists(current))
+                continue;
+
+            for (GateId user_id : circuit.getGateUsers(current))
+            {
+                if (!visited.count(user_id))
+                    stack.push(user_id);
+            }
+        }
+        return false;
+    }
+    
+
+    bool isValidArity(GateType type, const std::vector<GateId>& operands)
+    {
+        if (type == GateType::NOT)
+            return operands.size() == 1;
+
+        if (type == GateType::AND ||
+            type == GateType::OR  ||
+            type == GateType::XOR ||
+            type == GateType::NAND||
+            type == GateType::NOR ||
+            type == GateType::NXOR)
+            return operands.size() == 2;
+
+        return true;
+    }
+
+    bool gateExists(GateId id) const
+    {
+        try {
+            circuit.getGateType(id);
+            return true;
+        } catch (const std::out_of_range&) {
+            return false;
+        }
+    }
+
+    size_t randomGate()
+    {
+        std::vector<GateId> valid;
+
+        for (GateId i = 0; i < circuit.getNumberOfGates(); ++i)
+            if (gateExists(i) && !isInputGate(i))
+                valid.push_back(i);
+
+        if (valid.empty())
+            return 0;
+
+        return valid[randomIndex(valid.size())];
+    }
+
+    size_t randomIndex(size_t size)
+    {
+        if (size == 0)
+            return 0;
+        std::uniform_int_distribution<size_t> dist(0, size - 1);
+        return dist(rng);
+    }
+
+    GateId randomOperand(size_t gate_id)
+    {
+        std::vector<GateId> candidates;
+        for (GateId i = 0; i < gate_id; ++i)
+        {
+            if (gateExists(i))
+                candidates.push_back(i);
+        }
+
+        if (candidates.empty())
+            return 0;
+
+        return candidates[randomIndex(candidates.size())];
+    }
+
+    double randomDouble()
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        return dist(rng);
+    }
+
+    bool isInputGate(size_t gate)
+    {
+        if (!gateExists(gate))
+            return false;
+        try {
+            auto type = circuit.getGateType(gate);
+            return type == GateType::INPUT;
+        } catch (...) {
+            return false;
+        }
+    }
+};
+
+}
