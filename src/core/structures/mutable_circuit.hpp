@@ -564,6 +564,19 @@ public:
         }
     }
 
+
+    /**
+     * @brief Replaces one output gate with another
+     * @param old_output identifier of the output gate to be replaced
+     * @param new_output identifier of the gate that will become the new output
+     */
+    void replaceOutput(GateId old_output, GateId new_output)
+    {
+        auto it = std::ranges::find(output_gates, old_output);
+        *it = new_output;
+        checkForDuplicates(output_gates, "outputs");
+    }
+
     /**
      * @brief Changes the type of an existing logic node
      * @param gate_id identifier of the node to modify
