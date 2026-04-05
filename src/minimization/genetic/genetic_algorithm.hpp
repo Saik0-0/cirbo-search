@@ -51,7 +51,6 @@ namespace cirbo::minimization::genetic
                 
                 if (a_correct && b_correct)
                 {
-                    // Both correct - choose smaller
                     if (size < best_size)
                     {
                         best_fitness = fitness;
@@ -61,14 +60,12 @@ namespace cirbo::minimization::genetic
                 }
                 else if (b_correct && !a_correct)
                 {
-                    // Correct is always better than incorrect
                     best_fitness = fitness;
                     best_idx = idx;
                     best_size = size;
                 }
                 else if (!b_correct && !a_correct)
                 {
-                    // Both incorrect - choose higher fitness
                     if (fitness > best_fitness)
                     {
                         best_fitness = fitness;
@@ -76,7 +73,6 @@ namespace cirbo::minimization::genetic
                         best_size = size;
                     }
                 }
-                // If a_correct and !b_correct, keep current best
             }
             
             return best_idx;
@@ -96,7 +92,7 @@ namespace cirbo::minimization::genetic
 
         bool isCircuitCorrect(double fitness)
         {
-            return fitness >= FitnessFunction<CircuitT>::CORRECTNESS_WEIGHT - 0.1;
+            return fitness >= FitnessFunction<CircuitT>::CORRECTNESS_WEIGHT;
         }
 
         void printGateStats(const std::vector<std::unique_ptr<CircuitT>>& population, 
@@ -179,7 +175,6 @@ namespace cirbo::minimization::genetic
 
             FitnessFunction<CircuitT> fitness(initial_circuit);
             
-            double best_fitness_ever = FitnessFunction<CircuitT>::CORRECTNESS_WEIGHT;
             std::unique_ptr<CircuitT> best_circuit_ever = std::make_unique<CircuitT>(initial_circuit);
             size_t best_size_ever = initial_circuit.getActualNumberOfGates();
             
@@ -206,7 +201,6 @@ namespace cirbo::minimization::genetic
                         correct_count++;
                         size_t circuit_size = population[i]->getActualNumberOfGates();
                         
-                        // Track the best correct circuit in this generation (smallest size)
                         if (circuit_size < best_this_gen_size)
                         {
                             best_this_gen_size = circuit_size;
@@ -215,12 +209,10 @@ namespace cirbo::minimization::genetic
                     }
                 }
 
-                // Update best circuit ever if we found a correct circuit smaller than current best
                 if (best_this_gen_size < best_size_ever)
                 {
                     best_size_ever = best_this_gen_size;
                     best_circuit_ever = std::make_unique<CircuitT>(*population[best_this_gen_idx]);
-                    best_fitness_ever = FitnessFunction<CircuitT>::CORRECTNESS_WEIGHT;
                     
                     std::cout << "\n*** NEW BEST CORRECT CIRCUIT at gen " << generation 
                               << ": " << best_size_ever << " gates ***\n";
@@ -229,7 +221,6 @@ namespace cirbo::minimization::genetic
                     
                 }
 
-                // Find best in current generation (by fitness, for display)
                 auto best_it = std::max_element(fitness_results.begin(), fitness_results.end());
                 size_t best_idx = std::distance(fitness_results.begin(), best_it);
                 double current_best_fitness = fitness_results[best_idx];
@@ -272,7 +263,6 @@ namespace cirbo::minimization::genetic
                 std::vector<size_t> indices(population.size());
                 for (size_t i = 0; i < population.size(); ++i) indices[i] = i;
                 
-                // Sort by: correct circuits first (smaller size better), then by fitness
                 std::sort(indices.begin(), indices.end(),
                     [&](size_t a, size_t b) {
                         bool a_correct = isCircuitCorrect(fitness_results[a]);
@@ -282,7 +272,6 @@ namespace cirbo::minimization::genetic
                         
                         if (a_correct && b_correct)
                         {
-                            // Both correct - smaller is better
                             if (a_size != b_size)
                                 return a_size < b_size;
                             return fitness_results[a] > fitness_results[b];
@@ -297,7 +286,6 @@ namespace cirbo::minimization::genetic
                         }
                         else
                         {
-                            // Both incorrect - higher fitness is better
                             return fitness_results[a] > fitness_results[b];
                         }
                     });
@@ -310,14 +298,7 @@ namespace cirbo::minimization::genetic
                 while (new_population.size() < parameters.population_size)
                 {
                     size_t parent_idx;
-                    if (randomDouble() < 0.7)
-                    {
-                        parent_idx = indices[randomIndex(std::min(population.size()/2, size_t(20)))];
-                    }
-                    else
-                    {
-                        parent_idx = tournamentSelection(fitness_results, population);
-                    }
+                    parent_idx = tournamentSelection(fitness_results, population);
                     
                     auto offspring = std::make_unique<CircuitT>(*population[parent_idx]);
                     
