@@ -4,6 +4,13 @@
 
 namespace cirbo::minimization::genetic
 {
+
+/**
+ * @brief Fitness function used to evaluate candidate circuits.
+ *
+ * Compares the behavior of a test circuit with the initial circuit
+ * for all input combinations and rewards smaller correct circuits.
+ */
 template<class CircuitT>
 class FitnessFunction
 {
@@ -19,6 +26,13 @@ class FitnessFunction
     static constexpr double SIZE_WEIGHT = 1.0;
 
 
+    /**
+     * @brief Constructs the fitness function for a given circuit.
+     * @param circuit Reference circuit used as the baseline for comparison.
+     *
+     * Initializes circuit metadata and precomputes output values
+     * for all possible input combinations.
+     */
     FitnessFunction(const CircuitT& circuit)
     : initial_circuit(circuit)
     , inputs_amount(circuit.getInputGates().size())
@@ -29,6 +43,15 @@ class FitnessFunction
         initialEvaluateAllInputs();
     }
 
+    /**
+     * @brief Evaluates the fitness of a candidate circuit.
+     * @param test_circuit Circuit whose fitness will be evaluated.
+     * @return Fitness score representing correctness and circuit size.
+     *
+     * The score is based on how many input vectors produce identical
+     * outputs compared to the initial circuit. If fully correct,
+     * additional reward or penalty is applied based on circuit size.
+     */
     double evaluateFitness(const CircuitT& test_circuit) const
     {
         size_t correct_vectors = 0;
@@ -72,6 +95,15 @@ class FitnessFunction
     }
 
     private:
+    /**
+     * @brief Evaluates circuit outputs for all input combinations.
+     * @param test_circuit Circuit to evaluate.
+     * @param test_outputs Output gates of the circuit.
+     * @return Matrix of output states for every input vector.
+     *
+     * Each row corresponds to one input combination and contains
+     * the resulting states of all output gates.
+     */
     std::vector<std::vector<GateState>> evaluateCircuitOutputs(const CircuitT& test_circuit, const GateIdContainer& test_outputs) const
     {
         size_t all_combinations = 1ULL << inputs_amount;
@@ -94,11 +126,21 @@ class FitnessFunction
         return result_states;
     }
 
+    /**
+     * @brief Precomputes outputs of the initial circuit.
+     */
     void initialEvaluateAllInputs()
     {
         initial_result_states = evaluateCircuitOutputs(initial_circuit, outputs);
     }
 
+    /**
+     * @brief Computes output values for a given input assignment.
+     * @param circuit Circuit to evaluate.
+     * @param input_assigment Assignment of input gate values.
+     * @param outputs Output gate identifiers.
+     * @return Vector containing the states of all output gates.
+     */
     std::vector<GateState> getOutputValues(const CircuitT& circuit, const VectorAssignment<>& input_assigment, const GateIdContainer& outputs) const
     {
         const ICircuit& base_circuit = static_cast<const ICircuit&>(circuit);

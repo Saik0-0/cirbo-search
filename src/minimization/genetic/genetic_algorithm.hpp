@@ -28,12 +28,26 @@ namespace cirbo::minimization::genetic
     private:
         std::mt19937 rng{std::random_device{}()};
         
+        /**
+         * @brief Applies a random mutation to the given circuit.
+         * @param circuit Circuit instance that will be modified by mutation.
+         */
         void applyRandomMutation(CircuitT& circuit)
         {
             Mutation<CircuitT> mutator(circuit);
             mutator.applyRandomMutation();
         }
         
+        /**
+         * @brief Selects an individual using tournament selection.
+         * @param fitness_results Vector containing fitness values of the population.
+         * @param population Current population of circuits.
+         * @param tournament_size Number of individuals participating in the tournament.
+         * @return Index of the selected individual in the population.
+         *
+         * The best individual is chosen based on correctness, circuit size,
+         * and fitness value depending on their validity.
+         */
         size_t tournamentSelection(const std::vector<double>& fitness_results, const std::vector<std::unique_ptr<CircuitT>>& population, size_t tournament_size = 5)
         {
             size_t best_idx = randomIndex(fitness_results.size());
@@ -78,23 +92,43 @@ namespace cirbo::minimization::genetic
             return best_idx;
         }
         
+        /**
+         * @brief Generates a random index in the range [0, size).
+         */
         size_t randomIndex(size_t size)
         {
             std::uniform_int_distribution<size_t> dist(0, size - 1);
             return dist(rng);
         }
         
+        /**
+         * @brief Generates a random index in the range [0, size).
+         */
         double randomDouble()
         {
             std::uniform_real_distribution<double> dist(0.0, 1.0);
             return dist(rng);
         }
 
+        /**
+         * @brief Checks whether a circuit is considered correct based on fitness.
+         * @param fitness Fitness value of the circuit.
+         * @return true if the circuit satisfies the correctness threshold, false otherwise.
+         */
         bool isCircuitCorrect(double fitness)
         {
             return fitness >= FitnessFunction<CircuitT>::CORRECTNESS_WEIGHT;
         }
 
+        /**
+         * @brief Prints statistics about the current population.
+         * @param population Vector of circuits in the current generation.
+         * @param fitness_results Corresponding fitness values for each circuit.
+         * @param generation Current generation number.
+         *
+         * Displays information such as gate count distribution, number of
+         * correct circuits, and the smallest correct circuit found.
+         */
         void printGateStats(const std::vector<std::unique_ptr<CircuitT>>& population, 
                            const std::vector<double>& fitness_results,
                            size_t generation)
@@ -161,6 +195,16 @@ namespace cirbo::minimization::genetic
         }
 
     public:
+        /**
+         * @brief Runs the genetic algorithm for circuit minimization.
+         * @param initial_circuit Circuit used as the starting point for the population.
+         * @param parameters Configuration parameters controlling the algorithm.
+         * @return Unique pointer to the best circuit found during evolution.
+         * 
+         * The algorithm initializes a population from the initial circuit and
+         * iteratively applies evaluation, selection, elitism, and mutation
+         * to search for a smaller correct circuit.
+         */
         std::unique_ptr<CircuitT> run(const CircuitT& initial_circuit, const GeneticParams& parameters = GeneticParams{})
         {
             std::cout << "Initial circuit size: " << initial_circuit.getActualNumberOfGates() << " gates\n";

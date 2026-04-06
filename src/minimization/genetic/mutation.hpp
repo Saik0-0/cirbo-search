@@ -15,16 +15,25 @@ class Mutation
 {
 public:
 
+    /**
+     * @brief Constructs a mutation operator for a given circuit.
+     * @param circuit_ Reference to the circuit that will be modified by mutations.
+     *
+     * Initializes the mutation object and seeds the internal random
+     * number generator used for selecting mutation operations.
+     */
     Mutation(CircuitT& circuit_)
         : circuit(circuit_)
     {
         rng.seed(std::random_device{}());
     }
 
-    /*
-        Mutation 1
-        Replace gate type (keep valid arity)
-    */
+    /**
+     * @brief Changes the type of a randomly selected gate.
+     *
+     * Replaces the gate type with another compatible binary gate
+     * while preserving the existing operands.
+     */
     void changeGateTypeMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -63,10 +72,12 @@ public:
 
     }
 
-    /*
-        Mutation 2
-        Reconnect operand
-    */
+    /**
+     * @brief Reconnects one operand of a randomly selected gate.
+     *
+     * One operand of the gate is replaced with another valid gate
+     * while preventing cycles in the circuit.
+     */
     void reconnectOperandMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -125,10 +136,12 @@ public:
         }
     }
 
-    /*
-        Mutation 3
-        Insert NOT gate before gate
-    */
+    /**
+     * @brief Inserts a NOT gate before a randomly selected operand.
+     *
+     * Creates a new NOT gate that negates one operand of the selected gate
+     * and reconnects the circuit to use the new node.
+     */
     void insertNotMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -177,10 +190,12 @@ public:
         }
     }
 
-    /*
-        Mutation 4
-        Add random gate
-    */
+    /**
+     * @brief Adds a new randomly generated gate to the circuit.
+     *
+     * A new gate with randomly selected type and operands is created.
+     * With certain probability it may replace an operand in an existing user gate.
+     */
     void addRandomGateMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -244,10 +259,12 @@ public:
         }
     }
 
-    /*
-        Mutation 5
-        Duplicate substructure (original)
-    */
+    /**
+     * @brief Duplicates an existing gate.
+     *
+     * Creates a new gate with the same type and operands
+     * as a randomly selected gate in the circuit.
+     */
     void duplicateGateMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -270,10 +287,12 @@ public:
         circuit.addGate(type, operands, false);
     }
 
-    /*
-        Mutation 6
-        Remove random gate
-    */
+    /**
+     * @brief Removes a randomly selected gate.
+     *
+     * The gate is removed only if it is not an input, not an output,
+     * and has no users in the circuit.
+     */
     void removeRandomGateMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -291,10 +310,12 @@ public:
         circuit.removeGate(gate);
     }
 
-    /*
-        Mutation 7
-        Change output gate
-    */
+    /**
+     * @brief Replaces one output gate with another gate.
+     *
+     * Randomly selects an existing output gate and replaces it
+     * with another valid non-input gate in the circuit.
+     */
     void changeOutputGateMutation()
     {
         if (circuit.getNumberOfGates() <= 1)
@@ -323,6 +344,12 @@ public:
         
     }
 
+    /**
+     * @brief Applies one randomly selected mutation.
+     *
+     * Randomly chooses one of the available mutation types
+     * and applies it to the circuit.
+     */
     void applyRandomMutation()
     {
         if (circuit.getNumberOfGates() <= 3)
@@ -362,6 +389,14 @@ private:
     CircuitT& circuit;
     std::mt19937 rng;
 
+    /**
+     * @brief Checks whether a node is reachable from another node.
+     * @param ancestor Starting gate in the traversal.
+     * @param candidate Gate to check for reachability.
+     * @return true if candidate is reachable from ancestor, false otherwise.
+     *
+     * Used to prevent creation of cycles in the circuit graph.
+     */
     bool isDescendant(GateId ancestor, GateId candidate) const
     {
         if (ancestor == candidate)
@@ -395,6 +430,12 @@ private:
     }
     
 
+    /**
+     * @brief Validates operand count for a given gate type.
+     * @param type Type of the gate.
+     * @param operands List of operands for the gate.
+     * @return true if the operand count is valid for the gate type.
+     */
     bool isValidArity(GateType type, const std::vector<GateId>& operands)
     {
         if (type == GateType::NOT)
@@ -411,6 +452,11 @@ private:
         return true;
     }
 
+    /**
+     * @brief Checks whether a gate exists in the circuit.
+     * @param id Identifier of the gate.
+     * @return true if the gate exists, false otherwise.
+     */
     bool isGateExists(GateId id) const
     {
         try {
@@ -421,6 +467,12 @@ private:
         }
     }
 
+    /**
+     * @brief Selects a random non-input gate from the circuit.
+     * @return Identifier of a randomly selected gate.
+     *
+     * If no valid gate exists, returns 0.
+     */
     size_t randomGate()
     {
         std::vector<GateId> valid;
@@ -435,6 +487,9 @@ private:
         return valid[randomIndex(valid.size())];
     }
 
+    /**
+     * @brief Generates a random index in range [0, size).
+     */
     size_t randomIndex(size_t size)
     {
         if (size == 0)
@@ -443,6 +498,11 @@ private:
         return dist(rng);
     }
 
+    /**
+     * @brief Selects a random operand candidate for a gate.
+     * @param gate_id Identifier of the gate whose operands are being chosen.
+     * @return Identifier of a randomly selected valid operand gate.
+     */
     GateId randomOperand(size_t gate_id)
     {
         std::vector<GateId> candidates;
