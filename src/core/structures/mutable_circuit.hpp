@@ -405,10 +405,7 @@ public:
      * @return GateId - number of existing gates.
      * @note Equals to the size of the internal gate container.
      */
-    GateId getActualNumberOfGates() const
-    {
-        return gates.size();
-    }
+    GateId getActualNumberOfGates() const { return gates.size(); }
 
     /**
      * @brief Returns the number of logic nodes excluding inputs
@@ -549,23 +546,23 @@ public:
      * @param old_operand identifier of the operand to be replaced
      * @param new_operand identifier of the operand that will replace old_operand
      * @throws std::out_of_range if gate_id, old_operand, or new_operand does not exist
-     * 
+     *
      * The first occurrence of old_operand in the operand list of gate_id
      * is replaced with new_operand
-     * 
+     *
      * If old_operand is not found among the operands of gate_id,
      * the circuit remains unchanged
      */
     void replaceOperand(GateId gate_id, GateId old_operand, GateId new_operand)
     {
-        auto& node = gates.at(gate_id);
+        auto& node    = gates.at(gate_id);
         auto operands = node.getOperands();
-        bool found = false;
+        bool found    = false;
         for (auto& op : operands)
         {
             if (op == old_operand && !found)
             {
-                op = new_operand;
+                op    = new_operand;
                 found = true;
             }
         }
@@ -577,7 +574,6 @@ public:
         }
     }
 
-
     /**
      * @brief Replaces one output gate with another
      * @param old_output identifier of the output gate to be replaced
@@ -586,7 +582,7 @@ public:
     void replaceOutput(GateId old_output, GateId new_output)
     {
         auto it = std::ranges::find(output_gates, old_output);
-        *it = new_output;
+        *it     = new_output;
         checkForDuplicates(output_gates, "outputs");
     }
 
