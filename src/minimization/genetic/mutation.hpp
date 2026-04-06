@@ -36,7 +36,7 @@ public:
      */
     void changeGateTypeMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -76,7 +76,7 @@ public:
      */
     void reconnectOperandMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -156,7 +156,7 @@ public:
      */
     void insertNotMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -220,7 +220,7 @@ public:
      */
     void addRandomGateMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -296,7 +296,7 @@ public:
      */
     void duplicateGateMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -330,7 +330,7 @@ public:
      */
     void removeRandomGateMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -359,7 +359,7 @@ public:
      */
     void changeOutputGateMutation()
     {
-        if (circuit.getNumberOfGates() <= 1)
+        if (circuit.getActualNumberOfGates() <= 1)
         {
             return;
         }
@@ -396,7 +396,7 @@ public:
      */
     void applyRandomMutation()
     {
-        if (circuit.getNumberOfGates() <= 3)
+        if (circuit.getActualNumberOfGates() <= 3)
         {
             return;
         }
