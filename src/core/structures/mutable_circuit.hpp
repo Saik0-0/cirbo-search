@@ -543,6 +543,19 @@ public:
         gates.at(new_operand_gate).addUser(new_user_gate);
     }
 
+    /**
+     * @brief Replaces one operand of a logic node with another
+     * @param gate_id identifier of the node whose operand should be replaced
+     * @param old_operand identifier of the operand to be replaced
+     * @param new_operand identifier of the operand that will replace old_operand
+     * @throws std::out_of_range if gate_id, old_operand, or new_operand does not exist
+     * 
+     * The first occurrence of old_operand in the operand list of gate_id
+     * is replaced with new_operand
+     * 
+     * If old_operand is not found among the operands of gate_id,
+     * the circuit remains unchanged
+     */
     void replaceOperand(GateId gate_id, GateId old_operand, GateId new_operand)
     {
         auto& node = gates.at(gate_id);
