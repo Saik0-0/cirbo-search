@@ -58,13 +58,13 @@ private:
     {
         size_t best_idx     = randomIndex(fitness_results.size());
         double best_fitness = fitness_results[best_idx];
-        size_t best_size    = population[best_idx]->getActualNumberOfGates();
+        size_t best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
 
         for (size_t i = 1; i < tournament_size; ++i)
         {
             size_t idx     = randomIndex(fitness_results.size());
             double fitness = fitness_results[idx];
-            size_t size    = population[idx]->getActualNumberOfGates();
+            size_t size    = population[idx]->getActualNumberOfGatesWithoutNot();
 
             bool a_correct = isCircuitCorrect(best_fitness);
             bool b_correct = isCircuitCorrect(fitness);
@@ -147,7 +147,7 @@ private:
 
         for (size_t i = 0; i < population.size(); ++i)
         {
-            size_t gates = population[i]->getActualNumberOfGates();
+            size_t gates = population[i]->getActualNumberOfGatesWithoutNot();
             total_gates += gates;
             min_gates = std::min(min_gates, gates);
             max_gates = std::max(max_gates, gates);
@@ -210,7 +210,7 @@ public:
      */
     std::unique_ptr<CircuitT> run(CircuitT const& initial_circuit, GeneticParams const& parameters = GeneticParams{})
     {
-        std::cout << "Initial circuit size: " << initial_circuit.getActualNumberOfGates() << " gates\n";
+        std::cout << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
 
         std::vector<std::unique_ptr<CircuitT>> population;
         population.reserve(parameters.population_size);
@@ -223,11 +223,11 @@ public:
         FitnessFunction<CircuitT> fitness(initial_circuit);
 
         std::unique_ptr<CircuitT> best_circuit_ever = std::make_unique<CircuitT>(initial_circuit);
-        size_t best_size_ever                       = initial_circuit.getActualNumberOfGates();
+        size_t best_size_ever                       = initial_circuit.getActualNumberOfGatesWithoutNot();
 
         size_t correct_count = 0;
 
-        size_t last_best_size = initial_circuit.getActualNumberOfGates();
+        size_t last_best_size = initial_circuit.getActualNumberOfGatesWithoutNot();
 
         for (size_t generation = 0; generation < parameters.generations; ++generation)
         {
@@ -246,7 +246,7 @@ public:
                 if (isCircuitCorrect(fitness_result))
                 {
                     correct_count++;
-                    size_t circuit_size = population[i]->getActualNumberOfGates();
+                    size_t circuit_size = population[i]->getActualNumberOfGatesWithoutNot();
 
                     if (circuit_size < best_this_gen_size)
                     {
@@ -270,7 +270,7 @@ public:
             auto best_it                = std::max_element(fitness_results.begin(), fitness_results.end());
             size_t best_idx             = std::distance(fitness_results.begin(), best_it);
             double current_best_fitness = fitness_results[best_idx];
-            size_t current_best_size    = population[best_idx]->getActualNumberOfGates();
+            size_t current_best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
 
             if (generation % 50 == 0 || generation == 0)
             {
@@ -284,7 +284,7 @@ public:
 
                 for (size_t i = 0; i < population.size(); ++i)
                 {
-                    size_t gates = population[i]->getActualNumberOfGates();
+                    size_t gates = population[i]->getActualNumberOfGatesWithoutNot();
                     total_gates += gates;
                     min_gates = std::min(min_gates, gates);
                     max_gates = std::max(max_gates, gates);
@@ -313,8 +313,8 @@ public:
                 {
                     bool a_correct = isCircuitCorrect(fitness_results[a]);
                     bool b_correct = isCircuitCorrect(fitness_results[b]);
-                    size_t a_size  = population[a]->getActualNumberOfGates();
-                    size_t b_size  = population[b]->getActualNumberOfGates();
+                    size_t a_size  = population[a]->getActualNumberOfGatesWithoutNot();
+                    size_t b_size  = population[b]->getActualNumberOfGatesWithoutNot();
 
                     if (a_correct && b_correct)
                     {
@@ -362,11 +362,11 @@ public:
         }
 
         std::cout << "\n=== FINAL RESULT ===\n";
-        std::cout << "Initial gates: " << initial_circuit.getActualNumberOfGates() << "\n";
+        std::cout << "Initial gates: " << initial_circuit.getActualNumberOfGatesWithoutNot() << "\n";
         std::cout << "Final gates: " << best_size_ever << "\n";
-        if (best_size_ever < initial_circuit.getActualNumberOfGates())
+        if (best_size_ever < initial_circuit.getActualNumberOfGatesWithoutNot())
         {
-            std::cout << "IMPROVEMENT: saved " << initial_circuit.getActualNumberOfGates() - best_size_ever
+            std::cout << "IMPROVEMENT: saved " << initial_circuit.getActualNumberOfGatesWithoutNot() - best_size_ever
                       << " gates!\n";
         }
         else

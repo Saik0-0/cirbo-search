@@ -58,12 +58,13 @@ public:
 
         possible_types = {GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR};
 
-        GateType current_type = circuit.getGateType(gate);
+        // GateType current_type = circuit.getGateType(gate);
 
-        possible_types.erase(
-            std::remove(possible_types.begin(), possible_types.end(), current_type), possible_types.end());
+        // possible_types.erase(
+        //     std::remove(possible_types.begin(), possible_types.end(), current_type), possible_types.end());
 
-        GateType new_type = possible_types[randomIndex(possible_types.size())];
+        // GateType new_type = possible_types[randomIndex(possible_types.size())];
+        GateType new_type = GateType::AND;
 
         circuit.changeGateType(gate, new_type);
     }
@@ -227,8 +228,10 @@ public:
 
         GateId existing_gate = randomGate();
 
-        std::vector<GateType> possible_types = {
-            GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR, GateType::NOT};
+        // std::vector<GateType> possible_types = {
+        //     GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR, GateType::NOT};
+        
+        std::vector<GateType> possible_types = {GateType::AND, GateType::NOT};
 
         GateType new_type = possible_types[randomIndex(possible_types.size())];
         std::vector<GateId> operands;
