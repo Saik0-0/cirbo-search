@@ -242,7 +242,7 @@ private:
     std::unordered_map<GateId, MutableNode> gates;
     GateIdContainer input_gates;
     GateIdContainer output_gates;
-    GateId next_gate_id = 0;
+    GateId next_gate_id       = 0;
     GateId non_not_gate_count = 0;
 
     /**
@@ -434,10 +434,7 @@ public:
      */
     GateId getActualNumberOfGates() const { return gates.size(); }
 
-    GateId getActualNumberOfGatesWithoutNot() const
-    {
-        return non_not_gate_count;
-    }
+    GateId getActualNumberOfGatesWithoutNot() const { return non_not_gate_count; }
 
     /**
      * @brief Returns the number of logic nodes excluding inputs
@@ -634,9 +631,9 @@ public:
      * @param new_type new logic node type
      * @throws std::out_of_range if gate_id does not exist
      */
-    void changeGateType(GateId gate_id, GateType new_type) 
-    { 
-        auto& node = gates.at(gate_id);
+    void changeGateType(GateId gate_id, GateType new_type)
+    {
+        auto& node        = gates.at(gate_id);
         GateType old_type = node.getType();
 
         if (old_type != GateType::NOT && new_type == GateType::NOT)
@@ -648,7 +645,7 @@ public:
             ++non_not_gate_count;
         }
 
-        gates.at(gate_id).setType(new_type); 
+        gates.at(gate_id).setType(new_type);
     }
 
     /**

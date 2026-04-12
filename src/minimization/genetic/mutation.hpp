@@ -229,8 +229,9 @@ public:
         GateId existing_gate = randomGate();
 
         // std::vector<GateType> possible_types = {
-        //     GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR, GateType::NOT};
-        
+        //     GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR,
+        //     GateType::NOT};
+
         std::vector<GateType> possible_types = {GateType::AND, GateType::NOT};
 
         GateType new_type = possible_types[randomIndex(possible_types.size())];

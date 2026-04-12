@@ -463,6 +463,6 @@ TEST_CASE("MutableCircuit GetActualNumberOfGatesWithoutNot", "[mutable_circuit]"
     circuit.removeGate(2);
     REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 3);
 
-    circuit.addGate(GateType::NOT, {0}); 
+    circuit.addGate(GateType::NOT, {0});
     REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 3);
 }
