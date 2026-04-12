@@ -441,3 +441,28 @@ TEST_CASE("MutableCircuit RemoveGateThrowsOnInvalidId", "[mutable_circuit][excep
 
     REQUIRE_THROWS_AS(circuit.removeGate(42), std::out_of_range);
 }
+
+TEST_CASE("MutableCircuit GetActualNumberOfGatesWithoutNot", "[mutable_circuit]")
+{
+    MutableCircuit circuit;
+
+    circuit.addGate(GateType::INPUT, {});    // 0
+    circuit.addGate(GateType::INPUT, {});    // 1
+    circuit.addGate(GateType::NOT, {0});     // 2
+    circuit.addGate(GateType::AND, {1, 0});  // 3
+
+    REQUIRE(circuit.getActualNumberOfGates() == 4);
+    REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 3);
+
+    circuit.changeGateType(2, GateType::CONST_TRUE);
+    REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 4);
+
+    circuit.changeGateType(2, GateType::NOT);
+    REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 3);
+
+    circuit.removeGate(2);
+    REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 3);
+
+    circuit.addGate(GateType::NOT, {0}); 
+    REQUIRE(circuit.getActualNumberOfGatesWithoutNot() == 3);
+}
