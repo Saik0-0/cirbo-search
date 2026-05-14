@@ -284,6 +284,28 @@ private:
         }
     }
 
+protected:
+    /**
+     * @brief Recalculates the number of non-NOT gates in the circuit
+     * 
+     * non_not_gate_count contains the number of all gates
+     * whose type is different from GateType::NOT
+     * @note Performs a full traversal of the internal gate container
+     *       and recomputes the counter from scratch
+     */
+    void recalculateNonNotGateCount()
+    {
+        non_not_gate_count = 0;
+
+        for (auto const& [id, node] : gates)
+        {
+            if (node.getType() != GateType::NOT)
+            {
+                ++non_not_gate_count;
+            }
+        }
+    }
+
 public:
     MutableCircuit()                                           = default;
     ~MutableCircuit()                                          = default;
@@ -297,14 +319,7 @@ public:
         , output_gates(std::exchange(m_circuit.output_gates, {}))
         , next_gate_id(std::exchange(m_circuit.next_gate_id, 0))
     {
-        non_not_gate_count = 0;
-        for (auto const& [id, node] : gates)
-        {
-            if (node.getType() != GateType::NOT)
-            {
-                ++non_not_gate_count;
-            }
-        }
+        recalculateNonNotGateCount();
     }
 
     MutableCircuit(GateInfoContainer const& gates_info, GateIdContainer const& inputs, GateIdContainer const& outputs)
@@ -331,14 +346,7 @@ public:
         validateGateIds(input_gates);
         validateGateIds(output_gates);
 
-        non_not_gate_count = 0;
-        for (auto const& [id, node] : gates)
-        {
-            if (node.getType() != GateType::NOT)
-            {
-                ++non_not_gate_count;
-            }
-        }
+        recalculateNonNotGateCount();
     }
 
     MutableCircuit(GateInfoContainer&& gates_info, GateIdContainer&& inputs, GateIdContainer&& outputs)
@@ -365,14 +373,7 @@ public:
         validateGateIds(input_gates);
         validateGateIds(output_gates);
 
-        non_not_gate_count = 0;
-        for (auto const& [id, node] : gates)
-        {
-            if (node.getType() != GateType::NOT)
-            {
-                ++non_not_gate_count;
-            }
-        }
+        recalculateNonNotGateCount();
     }
 
     /**
