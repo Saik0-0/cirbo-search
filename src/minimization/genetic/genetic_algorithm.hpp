@@ -29,6 +29,12 @@ struct GeneticParams
     uint64_t seed = cirbo::utils::DefaultGlobalSeed;
 };
 
+struct GeneticConstants
+{
+    static constexpr size_t big_stats_period = 50;
+    static constexpr size_t small_stats_period = 10;
+};
+
 template<class CircuitT>
 class GeneticAlgorithm
 {
@@ -109,14 +115,14 @@ public:
             double current_best_fitness = fitness_results[best_idx];
             size_t current_best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
 
-            if (generation % 50 == 0 || generation == 0)
+            if (generation % GeneticConstants::big_stats_period == 0 || generation == 0)
             {
                 printGateStats(population, fitness_results, fitness, generation);
                 #ifdef CIRBO_ENABLE_SCATTER_STATS
                 collectScatterStats(population, fitness, generation);
                 #endif
             }
-            else if (generation % 10 == 0)
+            else if (generation % GeneticConstants::small_stats_period == 0)
             {
                 size_t total_gates = 0;
                 size_t min_gates   = std::numeric_limits<size_t>::max();
