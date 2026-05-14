@@ -393,6 +393,65 @@ public:
     }
 
     /**
+     * @brief Replaces one subtree with another subtree.
+     *
+     * Selects a target gate and replaces all its usages with another
+     * randomly selected compatible gate, effectively swapping subgraphs.
+     */
+    void replaceSubtreeMutation()
+    {
+        if (circuit.getActualNumberOfGates() <= 3)
+        {
+            return;
+        }
+
+        GateId target_root = randomGate();
+        GateId donor_root  = randomGate();
+
+        if (target_root == donor_root)
+        {
+            return;
+        }
+
+        if (!isGateExists(target_root) || !isGateExists(donor_root))
+        {
+            return;
+        }
+
+        if (isInputGate(target_root))
+        {
+            return;
+        }
+
+        if (isDescendant(target_root, donor_root))
+        {
+            return;
+        }
+
+        auto users = circuit.getGateUsers(target_root);
+
+        for (GateId user_id : users)
+        {
+            if (!isGateExists(user_id))
+            {
+                continue;
+            }
+
+            if (isDescendant(donor_root, user_id))
+            {
+                continue;
+            }
+
+            circuit.replaceOperand(user_id, target_root, donor_root);
+        }
+
+        if (!circuit.isOutputGate(target_root) && !circuit.isGateHasUsers(target_root))
+        {
+            circuit.removeGate(target_root);
+        }
+    }
+
+    /**
      * @brief Applies one randomly selected mutation.
      *
      * Randomly chooses one of the available mutation types
@@ -405,7 +464,7 @@ public:
             return;
         }
 
-        std::uniform_int_distribution<int> dist(0, 6);
+        std::uniform_int_distribution<int> dist(0, 7);
         int mutation_type = dist(rng);
 
         switch (mutation_type)
@@ -430,6 +489,9 @@ public:
                 break;
             case 6:
                 changeOutputGateMutation();
+                break;
+            case 7:
+                replaceSubtreeMutation();
                 break;
         }
     }
