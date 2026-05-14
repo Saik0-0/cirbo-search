@@ -88,6 +88,9 @@ public:
             - static_cast<int64_t>(current_size);
 
         double size_bonus = size_diff * size_weight_;
+
+        validateFitnessModel(correctness, size_bonus);
+        
         fitness += size_bonus;        
 
         return fitness;
@@ -173,6 +176,21 @@ private:
         output_states.reserve(outputs.size());
         for (GateId output_id : outputs) { output_states.push_back(result_assigment->getGateState(output_id)); }
         return output_states;
+    }
+
+    void validateFitnessModel(double correctness, double size_bonus) const
+    {
+        if (correctness < 1.0)
+        {
+            double correctness_gap = (1.0 - correctness) * correctness_weight_;
+
+            if (size_bonus > correctness_gap)
+            {
+                throw std::runtime_error(
+                    "Fitness model violation: size bonus can override correctness loss. "
+                    "Weights are inconsistent for current circuit distribution.");
+            }
+        }
     }
 };
 }  // namespace cirbo::minimization::genetic
