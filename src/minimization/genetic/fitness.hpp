@@ -22,8 +22,8 @@ public:
     GateIdContainer outputs;
     std::vector<std::vector<GateState>> initial_result_states;
 
-    static constexpr double CORRECTNESS_WEIGHT = 1000.0;
-    static constexpr double SIZE_WEIGHT        = 1.0;
+    double CORRECTNESS_WEIGHT;
+    double SIZE_WEIGHT;
 
     /**
      * @brief Constructs the fitness function for a given circuit.
@@ -32,12 +32,17 @@ public:
      * Initializes circuit metadata and precomputes output values
      * for all possible input combinations.
      */
-    FitnessFunction(CircuitT const& circuit)
+    FitnessFunction(
+        CircuitT const& circuit,
+        double correctness_weight = 1000.0,
+        double size_weight = 1.0)
         : initial_circuit(circuit)
         , inputs_amount(circuit.getInputGates().size())
         , outputs_amount(circuit.getOutputGates().size())
         , inputs(circuit.getInputGates())
-        , outputs(circuit.getOutputGates())
+        , outputs(circuit.getOutputGates()
+        , CORRECTNESS_WEIGHT(correctness_weight)
+        , SIZE_WEIGHT(size_weight))
     {
         initialEvaluateAllInputs();
     }
