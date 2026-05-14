@@ -20,7 +20,7 @@ public:
     size_t outputs_amount;
     GateIdContainer inputs;
     GateIdContainer outputs;
-    std::vector<std::vector<GateState>> initial_result_states;
+    std::vector<std::vector<GateState>> target_states;
 
     double CORRECTNESS_WEIGHT;
     double SIZE_WEIGHT;
@@ -63,15 +63,15 @@ public:
         auto test_outputs       = test_circuit.getOutputGates();
         auto test_result_states = evaluateCircuitOutputs(test_circuit, test_outputs);
 
-        for (size_t i = 0; i < initial_result_states.size(); ++i)
+        for (size_t i = 0; i < target_states.size(); ++i)
         {
-            if (initial_result_states[i] == test_result_states[i])
+            if (target_states[i] == test_result_states[i])
             {
                 ++correct_vectors;
             }
         }
 
-        double correctness = static_cast<double>(correct_vectors) / initial_result_states.size();
+        double correctness = static_cast<double>(correct_vectors) / target_states.size();
 
         if (correctness < 1.0)
         {
@@ -104,9 +104,9 @@ public:
         auto test_outputs       = test_circuit.getOutputGates();
         auto test_result_states = evaluateCircuitOutputs(test_circuit, test_outputs);
 
-        for (size_t i = 0; i < initial_result_states.size(); ++i)
+        for (size_t i = 0; i < target_states.size(); ++i)
         {
-            if (initial_result_states[i] == test_result_states[i])
+            if (target_states[i] == test_result_states[i])
             {
                 ++correct_vectors;
             }
@@ -152,7 +152,7 @@ private:
     /**
      * @brief Precomputes outputs of the initial circuit.
      */
-    void initialEvaluateAllInputs() { initial_result_states = evaluateCircuitOutputs(initial_circuit, outputs); }
+    void initialEvaluateAllInputs() { target_states = evaluateCircuitOutputs(initial_circuit, outputs); }
 
     /**
      * @brief Computes output values for a given input assignment.
