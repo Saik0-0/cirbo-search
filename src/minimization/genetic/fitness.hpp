@@ -83,16 +83,8 @@ public:
 
         double fitness = correctness * CORRECTNESS_WEIGHT;
 
-        if (current_size < initial_size)
-        {
-            double size_bonus = (initial_size - current_size) * SIZE_WEIGHT;
-            fitness += size_bonus;
-        }
-        else if (current_size > initial_size)
-        {
-            double size_penalty = (current_size - initial_size) * SIZE_WEIGHT;
-            fitness -= size_penalty;
-        }
+        double size_bonus = (initial_size - current_size) * SIZE_WEIGHT;
+        fitness += size_bonus;        
 
         return fitness;
     }
