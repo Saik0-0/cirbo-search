@@ -192,7 +192,7 @@ public:
 
                 if (randomDouble() < parameters.mutation_rate)
                 {
-                    applyRandomMutation(*offspring, rng);
+                    applyRandomMutation(offspring.get(), rng);
                 }
 
                 new_population.push_back(std::move(offspring));
