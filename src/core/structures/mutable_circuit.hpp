@@ -602,7 +602,7 @@ public:
             if (op == old_operand)
             {
                 op    = new_operand;
-                node.setOperands(operands);
+                node.setOperands(std::move(operands));
                 gates.at(old_operand).removeIdFromUsers(gate_id, false);
                 gates.at(new_operand).addUser(gate_id);
                 return;
