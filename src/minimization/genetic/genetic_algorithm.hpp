@@ -80,6 +80,7 @@ private:
     size_t tournamentSelection(
         std::vector<double> const& fitness_results,
         std::vector<std::unique_ptr<CircuitT>> const& population,
+        FitnessFunction<CircuitT> const& fitness,
         size_t tournament_size = 5)
     {
         size_t best_idx     = randomIndex(fitness_results.size());
@@ -89,32 +90,32 @@ private:
         for (size_t i = 1; i < tournament_size; ++i)
         {
             size_t idx     = randomIndex(fitness_results.size());
-            double fitness = fitness_results[idx];
+            double fitness_idx = fitness_results[idx];
             size_t size    = population[idx]->getActualNumberOfGatesWithoutNot();
 
-            bool a_correct = isCircuitCorrect(best_fitness);
-            bool b_correct = isCircuitCorrect(fitness);
+            bool a_correct = fitness.isCorrect(best_fitness);
+            bool b_correct = fitness.isCorrect(fitness_idx);
 
             if (a_correct && b_correct)
             {
                 if (size < best_size)
                 {
-                    best_fitness = fitness;
+                    best_fitness = fitness_idx;
                     best_idx     = idx;
                     best_size    = size;
                 }
             }
             else if (b_correct && !a_correct)
             {
-                best_fitness = fitness;
+                best_fitness = fitness_idx;
                 best_idx     = idx;
                 best_size    = size;
             }
             else if (!b_correct && !a_correct)
             {
-                if (fitness > best_fitness)
+                if (fitness_idx > best_fitness)
                 {
-                    best_fitness = fitness;
+                    best_fitness = fitness_idx;
                     best_idx     = idx;
                     best_size    = size;
                 }
@@ -143,13 +144,6 @@ private:
     }
 
     /**
-     * @brief Checks whether a circuit is considered correct based on fitness.
-     * @param fitness Fitness value of the circuit.
-     * @return true if the circuit satisfies the correctness threshold, false otherwise.
-     */
-    bool isCircuitCorrect(double fitness) { return fitness >= FitnessFunction<CircuitT>::CORRECTNESS_WEIGHT; }
-
-    /**
      * @brief Prints statistics about the current population.
      * @param population Vector of circuits in the current generation.
      * @param fitness_results Corresponding fitness values for each circuit.
@@ -161,6 +155,7 @@ private:
     void printGateStats(
         std::vector<std::unique_ptr<CircuitT>> const& population,
         std::vector<double> const& fitness_results,
+        FitnessFunction<CircuitT> const& fitness,
         size_t generation)
     {
         std::map<size_t, size_t> size_distribution;
@@ -180,7 +175,7 @@ private:
 
             size_distribution[gates]++;
 
-            if (isCircuitCorrect(fitness_results[i]))
+            if (fitness.isCorrect(fitness_results[i]))
             {
                 correct_count++;
                 correct_size_distribution[gates]++;
@@ -269,7 +264,7 @@ public:
                 double fitness_result = fitness.evaluateFitness(*population[i]);
                 fitness_results.push_back(fitness_result);
 
-                if (isCircuitCorrect(fitness_result))
+                if (fitness.isCorrect(fitness_result))
                 {
                     correct_count++;
                     size_t circuit_size = population[i]->getActualNumberOfGatesWithoutNot();
@@ -300,7 +295,7 @@ public:
 
             if (generation % 50 == 0 || generation == 0)
             {
-                printGateStats(population, fitness_results, generation);
+                printGateStats(population, fitness_results, fitness, generation);
                 #ifdef CIRBO_ENABLE_SCATTER_STATS
                 collectScatterStats(population, fitness, generation);
                 #endif
@@ -340,8 +335,8 @@ public:
                 indices.end(),
                 [&](size_t a, size_t b)
                 {
-                    bool a_correct = isCircuitCorrect(fitness_results[a]);
-                    bool b_correct = isCircuitCorrect(fitness_results[b]);
+                    bool a_correct = fitness.isCorrect(fitness_results[a]);
+                    bool b_correct = fitness.isCorrect(fitness_results[b]);
                     size_t a_size  = population[a]->getActualNumberOfGatesWithoutNot();
                     size_t b_size  = population[b]->getActualNumberOfGatesWithoutNot();
 
@@ -375,7 +370,7 @@ public:
             while (new_population.size() < parameters.population_size)
             {
                 size_t parent_idx;
-                parent_idx = tournamentSelection(fitness_results, population);
+                parent_idx = tournamentSelection(fitness_results, population, fitness);
 
                 auto offspring = std::make_unique<CircuitT>(*population[parent_idx]);
 
@@ -405,7 +400,7 @@ public:
 
         double final_fitness = fitness.evaluateFitness(*best_circuit_ever);
         std::cout << "Final circuit fitness: " << final_fitness << "\n";
-        if (isCircuitCorrect(final_fitness))
+        if (fitness.isCorrect(final_fitness))
         {
             std::cout << "Final circuit is CORRECT\n";
         }

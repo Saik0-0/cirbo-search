@@ -22,8 +22,8 @@ public:
     GateIdContainer outputs;
     std::vector<std::vector<GateState>> target_states;
 
-    double CORRECTNESS_WEIGHT;
-    double SIZE_WEIGHT;
+    double correctness_weight_;
+    double size_weight_;
 
     /**
      * @brief Constructs the fitness function for a given circuit.
@@ -40,9 +40,9 @@ public:
         , inputs_amount(circuit.getInputGates().size())
         , outputs_amount(circuit.getOutputGates().size())
         , inputs(circuit.getInputGates())
-        , outputs(circuit.getOutputGates()
-        , CORRECTNESS_WEIGHT(correctness_weight)
-        , SIZE_WEIGHT(size_weight))
+        , outputs(circuit.getOutputGates())
+        , correctness_weight_(correctness_weight)
+        , size_weight_(size_weight)
     {
         initialEvaluateAllInputs();
     }
@@ -73,17 +73,21 @@ public:
 
         double correctness = static_cast<double>(correct_vectors) / target_states.size();
 
-        if (correctness < 1.0)
-        {
-            return correctness * CORRECTNESS_WEIGHT;
-        }
-
         size_t initial_size = initial_circuit.getActualNumberOfGates();
         size_t current_size = test_circuit.getActualNumberOfGates();
 
-        double fitness = correctness * CORRECTNESS_WEIGHT;
+        double fitness = correctness;
 
-        double size_bonus = (initial_size - current_size) * SIZE_WEIGHT;
+        if (correctness == 1.0)
+        {
+            fitness = correctness * correctness_weight_;
+        }
+
+        int64_t size_diff =
+            static_cast<int64_t>(initial_size)
+            - static_cast<int64_t>(current_size);
+
+        double size_bonus = size_diff * size_weight_;
         fitness += size_bonus;        
 
         return fitness;
@@ -105,6 +109,11 @@ public:
         }
 
         return correct_vectors;
+    }
+
+    bool isCorrect(double fitness_value) const
+    {
+        return fitness_value >= correctness_weight_;
     }
 
 private:
