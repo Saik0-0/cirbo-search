@@ -15,7 +15,7 @@ template<class CircuitT>
 class FitnessFunction
 {
 public:
-    CircuitT const& initial_circuit;
+    size_t initial_circuit_size;
     size_t inputs_amount;
     size_t outputs_amount;
     GateIdContainer inputs;
@@ -36,7 +36,7 @@ public:
         CircuitT const& circuit,
         double correctness_weight = 1000.0,
         double size_weight = 1.0)
-        : initial_circuit(circuit)
+        : initial_circuit_size(circuit.getActualNumberOfGates())
         , inputs_amount(circuit.getInputGates().size())
         , outputs_amount(circuit.getOutputGates().size())
         , inputs(circuit.getInputGates())
@@ -44,7 +44,7 @@ public:
         , correctness_weight_(correctness_weight)
         , size_weight_(size_weight)
     {
-        initialEvaluateAllInputs();
+        target_states = evaluateCircuitOutputs(circuit, outputs);
     }
 
     /**
@@ -73,7 +73,6 @@ public:
 
         double correctness = static_cast<double>(correct_vectors) / target_states.size();
 
-        size_t initial_size = initial_circuit.getActualNumberOfGates();
         size_t current_size = test_circuit.getActualNumberOfGates();
 
         double fitness = correctness;
@@ -84,13 +83,13 @@ public:
         }
 
         int64_t size_diff =
-            static_cast<int64_t>(initial_size)
+            static_cast<int64_t>(initial_circuit_size)
             - static_cast<int64_t>(current_size);
 
         double size_bonus = size_diff * size_weight_;
 
         validateFitnessModel(correctness, size_bonus);
-        
+
         fitness += size_bonus;        
 
         return fitness;
@@ -152,11 +151,6 @@ private:
 
         return result_states;
     }
-
-    /**
-     * @brief Precomputes outputs of the initial circuit.
-     */
-    void initialEvaluateAllInputs() { target_states = evaluateCircuitOutputs(initial_circuit, outputs); }
 
     /**
      * @brief Computes output values for a given input assignment.
