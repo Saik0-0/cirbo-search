@@ -32,16 +32,6 @@ class GeneticAlgorithm
 private:
     std::mt19937 rng{std::random_device{}()};
 
-    /**
-     * @brief Applies a random mutation to the given circuit.
-     * @param circuit Circuit instance that will be modified by mutation.
-     */
-    void applyRandomMutation(CircuitT& circuit)
-    {
-        Mutation<CircuitT> mutator(circuit);
-        mutator.applyRandomMutation();
-    }
-
     #ifdef CIRBO_ENABLE_SCATTER_STATS
     void collectScatterStats(
         std::vector<std::unique_ptr<CircuitT>> const& population,
@@ -376,7 +366,7 @@ public:
 
                 if (randomDouble() < parameters.mutation_rate)
                 {
-                    applyRandomMutation(*offspring);
+                    applyRandomMutation(*offspring, rng);
                 }
 
                 new_population.push_back(std::move(offspring));
