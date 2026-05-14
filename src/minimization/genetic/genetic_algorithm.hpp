@@ -275,6 +275,7 @@ private:
     {
         size_t best_idx     = randomIndex(fitness_results.size());
         double best_fitness = fitness_results[best_idx];
+        bool best_correct = fitness.isCorrect(best_fitness);
         size_t best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
 
         for (size_t i = 1; i < tournament_size; ++i)
@@ -282,11 +283,9 @@ private:
             size_t idx     = randomIndex(fitness_results.size());
             double fitness_idx = fitness_results[idx];
             size_t size    = population[idx]->getActualNumberOfGatesWithoutNot();
-
-            bool a_correct = fitness.isCorrect(best_fitness);
             bool b_correct = fitness.isCorrect(fitness_idx);
 
-            if (a_correct && b_correct)
+            if (best_correct && b_correct)
             {
                 if (size < best_size)
                 {
@@ -295,13 +294,14 @@ private:
                     best_size    = size;
                 }
             }
-            else if (b_correct && !a_correct)
+            else if (b_correct && !best_correct)
             {
                 best_fitness = fitness_idx;
                 best_idx     = idx;
                 best_size    = size;
+                best_correct = true;
             }
-            else if (!b_correct && !a_correct)
+            else if (!b_correct && !best_correct)
             {
                 if (fitness_idx > best_fitness)
                 {
