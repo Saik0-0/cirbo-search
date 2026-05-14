@@ -597,21 +597,18 @@ public:
     {
         auto& node    = gates.at(gate_id);
         auto operands = node.getOperands();
-        bool found    = false;
         for (auto& op : operands)
         {
-            if (op == old_operand && !found)
+            if (op == old_operand)
             {
                 op    = new_operand;
-                found = true;
+                node.setOperands(operands);
+                gates.at(old_operand).removeIdFromUsers(gate_id, false);
+                gates.at(new_operand).addUser(gate_id);
+                return;
             }
         }
-        if (found)
-        {
-            node.setOperands(operands);
-            gates.at(old_operand).removeIdFromUsers(gate_id, false);
-            gates.at(new_operand).addUser(gate_id);
-        }
+        return;
     }
 
     /**
