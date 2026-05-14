@@ -47,7 +47,7 @@ public:
     {
         rng.seed(static_cast<std::mt19937::result_type>(parameters.seed));
         
-        std::cout << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
+        std::cerr << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
 
         std::vector<std::unique_ptr<CircuitT>> population;
         population.reserve(parameters.population_size);
@@ -98,9 +98,9 @@ public:
                 best_size_ever    = best_this_gen_size;
                 best_circuit_ever = std::make_unique<CircuitT>(*population[best_this_gen_idx]);
 
-                std::cout << "\n*** NEW BEST CORRECT CIRCUIT at gen " << generation << ": " << best_size_ever
+                std::cerr << "\n*** NEW BEST CORRECT CIRCUIT at gen " << generation << ": " << best_size_ever
                           << " gates ***\n";
-                std::cout << "Improved from " << last_best_size << " gates\n";
+                std::cerr << "Improved from " << last_best_size << " gates\n";
                 last_best_size = best_size_ever;
             }
 
@@ -132,7 +132,7 @@ public:
 
                 double avg_gates = static_cast<double>(total_gates) / population.size();
 
-                std::cout << "Gen " << generation << " | sizes: min=" << min_gates << " avg=" << avg_gates
+                std::cerr << "Gen " << generation << " | sizes: min=" << min_gates << " avg=" << avg_gates
                           << " max=" << max_gates << " | correct=" << correct_count << "/" << population.size()
                           << " | best_ever=" << best_size_ever << " | best_fit=" << current_best_fitness << "\n";
             }
@@ -201,28 +201,28 @@ public:
             population = std::move(new_population);
         }
 
-        std::cout << "\n=== FINAL RESULT ===\n";
-        std::cout << "Initial gates: " << initial_circuit.getActualNumberOfGatesWithoutNot() << "\n";
-        std::cout << "Final gates: " << best_size_ever << "\n";
+        std::cerr << "\n=== FINAL RESULT ===\n";
+        std::cerr << "Initial gates: " << initial_circuit.getActualNumberOfGatesWithoutNot() << "\n";
+        std::cerr << "Final gates: " << best_size_ever << "\n";
         if (best_size_ever < initial_circuit.getActualNumberOfGatesWithoutNot())
         {
-            std::cout << "IMPROVEMENT: saved " << initial_circuit.getActualNumberOfGatesWithoutNot() - best_size_ever
+            std::cerr << "IMPROVEMENT: saved " << initial_circuit.getActualNumberOfGatesWithoutNot() - best_size_ever
                       << " gates!\n";
         }
         else
         {
-            std::cout << "No improvement found.\n";
+            std::cerr << "No improvement found.\n";
         }
 
         double final_fitness = fitness.evaluateFitness(*best_circuit_ever);
-        std::cout << "Final circuit fitness: " << final_fitness << "\n";
+        std::cerr << "Final circuit fitness: " << final_fitness << "\n";
         if (fitness.isCorrect(final_fitness))
         {
-            std::cout << "Final circuit is CORRECT\n";
+            std::cerr << "Final circuit is CORRECT\n";
         }
         else
         {
-            std::cout << "Final circuit is INCORRECT\n";
+            std::cerr << "Final circuit is INCORRECT\n";
         }
 
         return std::move(best_circuit_ever);
@@ -372,23 +372,23 @@ private:
             }
         }
 
-        std::cout << "\n--- Generation " << generation << " ---\n";
-        std::cout << "Population size: " << population.size() << "\n";
-        std::cout << "Gate count: min=" << min_gates << ", max=" << max_gates << "\n";
-        std::cout << "Correct circuits: " << correct_count << "/" << population.size() << "\n";
+        std::cerr << "\n--- Generation " << generation << " ---\n";
+        std::cerr << "Population size: " << population.size() << "\n";
+        std::cerr << "Gate count: min=" << min_gates << ", max=" << max_gates << "\n";
+        std::cerr << "Correct circuits: " << correct_count << "/" << population.size() << "\n";
 
-        std::cout << "\nSize distribution (all circuits):\n";
+        std::cerr << "\nSize distribution (all circuits):\n";
         for (auto const& [size, count] : size_distribution)
         {
             double percentage = 100.0 * count / population.size();
-            std::cout << "  " << size << " gates: " << count << " (" << percentage << "%)";
+            std::cerr << "  " << size << " gates: " << count << " (" << percentage << "%)";
 
             if (correct_size_distribution.count(size))
             {
                 double correct_percentage = 100.0 * correct_size_distribution[size] / count;
-                std::cout << " - correct: " << correct_size_distribution[size] << " (" << correct_percentage << "%)";
+                std::cerr << " - correct: " << correct_size_distribution[size] << " (" << correct_percentage << "%)";
             }
-            std::cout << "\n";
+            std::cerr << "\n";
         }
 
         size_t best_correct_size = std::numeric_limits<size_t>::max();
@@ -402,10 +402,10 @@ private:
 
         if (best_correct_size < std::numeric_limits<size_t>::max())
         {
-            std::cout << "\nBest correct circuit size: " << best_correct_size << " gates\n";
+            std::cerr << "\nBest correct circuit size: " << best_correct_size << " gates\n";
         }
 
-        std::cout << "================================\n";
+        std::cerr << "================================\n";
     }
 };
 }  // namespace cirbo::minimization::genetic
