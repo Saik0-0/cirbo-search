@@ -673,44 +673,27 @@ void applyRandomMutation(CircuitT& circuit, std::mt19937& rng)
         return;
     }
 
-    std::uniform_int_distribution<int> dist(0, 7);
+    using MutationFn = void(*)(CircuitT&, std::mt19937&);
 
-    int mutation_type = dist(rng);
+    static MutationFn mutations[] = {
+        changeGateTypeMutation<CircuitT>,
+        reconnectOperandMutation<CircuitT>,
+        insertNotMutation<CircuitT>,
+        addRandomGateMutation<CircuitT>,
+        duplicateGateMutation<CircuitT>,
+        removeRandomGateMutation<CircuitT>,
+        changeOutputGateMutation<CircuitT>,
+        replaceSubtreeMutation<CircuitT>
+    };
 
-    switch (mutation_type)
-    {
-        case 0:
-            changeGateTypeMutation(circuit, rng);
-            break;
+    std::uniform_int_distribution<int> dist(
+        0,
+        static_cast<int>(std::size(mutations)) - 1
+    );
 
-        case 1:
-            reconnectOperandMutation(circuit, rng);
-            break;
+    int idx = dist(rng);
 
-        case 2:
-            insertNotMutation(circuit, rng);
-            break;
-
-        case 3:
-            addRandomGateMutation(circuit, rng);
-            break;
-
-        case 4:
-            duplicateGateMutation(circuit, rng);
-            break;
-
-        case 5:
-            removeRandomGateMutation(circuit, rng);
-            break;
-
-        case 6:
-            changeOutputGateMutation(circuit, rng);
-            break;
-
-        case 7:
-            replaceSubtreeMutation(circuit, rng);
-            break;
-    }
+    mutations[idx](circuit, rng);
 }
 
 } // namespace cirbo::minimization::genetic
