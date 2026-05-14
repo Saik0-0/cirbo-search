@@ -92,6 +92,24 @@ public:
         return fitness;
     }
 
+    size_t getCorrectMatches(CircuitT const& test_circuit) const
+    {
+        size_t correct_vectors = 0;
+
+        auto test_outputs       = test_circuit.getOutputGates();
+        auto test_result_states = evaluateCircuitOutputs(test_circuit, test_outputs);
+
+        for (size_t i = 0; i < initial_result_states.size(); ++i)
+        {
+            if (initial_result_states[i] == test_result_states[i])
+            {
+                ++correct_vectors;
+            }
+        }
+
+        return correct_vectors;
+    }
+
 private:
     /**
      * @brief Evaluates circuit outputs for all input combinations.
