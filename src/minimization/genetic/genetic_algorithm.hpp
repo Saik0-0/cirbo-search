@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -40,6 +41,31 @@ private:
         Mutation<CircuitT> mutator(circuit);
         mutator.applyRandomMutation();
     }
+
+    #ifdef CIRBO_ENABLE_SCATTER_STATS
+    void collectScatterStats(
+        std::vector<std::unique_ptr<CircuitT>> const& population,
+        FitnessFunction<CircuitT> const& fitness,
+        size_t generation)
+    {
+        std::ofstream out("scatter_gen_" + std::to_string(generation) + ".csv");
+
+        out << "size,ln_matches\n";
+
+        for (auto const& circuit : population)
+        {
+            size_t size = circuit->getActualNumberOfGatesWithoutNot();
+
+            size_t matches = fitness.getCorrectMatches(*circuit);
+
+            double ln_matches = std::log((double)matches + 1.0);
+
+            out << size << "," << ln_matches << "\n";
+        }
+
+        out.close();
+    }
+    #endif
 
     /**
      * @brief Selects an individual using tournament selection.
@@ -275,6 +301,9 @@ public:
             if (generation % 50 == 0 || generation == 0)
             {
                 printGateStats(population, fitness_results, generation);
+                #ifdef CIRBO_ENABLE_SCATTER_STATS
+                collectScatterStats(population, fitness, generation);
+                #endif
             }
             else if (generation % 10 == 0)
             {
