@@ -13,6 +13,7 @@
 #include "core/structures/mutable_circuit.hpp"
 #include "fitness.hpp"
 #include "mutation.hpp"
+#include "utils/random.hpp"
 
 namespace cirbo::minimization::genetic
 {
@@ -24,13 +25,15 @@ struct GeneticParams
     double mutation_rate  = 0.8;
     double elite_rate     = 0.1;
     double crossover_rate = 0.0;
+
+    uint64_t seed = cirbo::utils::DefaultGlobalSeed;
 };
 
 template<class CircuitT>
 class GeneticAlgorithm
 {
 private:
-    std::mt19937 rng{std::random_device{}()};
+    std::mt19937 rng;
 
     #ifdef CIRBO_ENABLE_SCATTER_STATS
     void collectScatterStats(
@@ -221,6 +224,8 @@ public:
      */
     std::unique_ptr<CircuitT> run(CircuitT const& initial_circuit, GeneticParams const& parameters = GeneticParams{})
     {
+        rng.seed(static_cast<std::mt19937::result_type>(parameters.seed));
+        
         std::cout << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
 
         std::vector<std::unique_ptr<CircuitT>> population;
