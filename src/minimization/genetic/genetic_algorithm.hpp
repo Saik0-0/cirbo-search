@@ -32,185 +32,6 @@ struct GeneticParams
 template<class CircuitT>
 class GeneticAlgorithm
 {
-private:
-    std::mt19937 rng;
-
-    #ifdef CIRBO_ENABLE_SCATTER_STATS
-    void collectScatterStats(
-        std::vector<std::unique_ptr<CircuitT>> const& population,
-        FitnessFunction<CircuitT> const& fitness,
-        size_t generation)
-    {
-        std::ofstream out("scatter_gen_" + std::to_string(generation) + ".csv");
-
-        out << "size,ln_matches\n";
-
-        for (auto const& circuit : population)
-        {
-            size_t size = circuit->getActualNumberOfGatesWithoutNot();
-
-            size_t matches = fitness.getCorrectMatches(*circuit);
-
-            double ln_matches = std::log((double)matches + 1.0);
-
-            out << size << "," << ln_matches << "\n";
-        }
-
-        out.close();
-    }
-    #endif
-
-    /**
-     * @brief Selects an individual using tournament selection.
-     * @param fitness_results Vector containing fitness values of the population.
-     * @param population Current population of circuits.
-     * @param tournament_size Number of individuals participating in the tournament.
-     * @return Index of the selected individual in the population.
-     *
-     * The best individual is chosen based on correctness, circuit size,
-     * and fitness value depending on their validity.
-     */
-    size_t tournamentSelection(
-        std::vector<double> const& fitness_results,
-        std::vector<std::unique_ptr<CircuitT>> const& population,
-        FitnessFunction<CircuitT> const& fitness,
-        size_t tournament_size = 5)
-    {
-        size_t best_idx     = randomIndex(fitness_results.size());
-        double best_fitness = fitness_results[best_idx];
-        size_t best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
-
-        for (size_t i = 1; i < tournament_size; ++i)
-        {
-            size_t idx     = randomIndex(fitness_results.size());
-            double fitness_idx = fitness_results[idx];
-            size_t size    = population[idx]->getActualNumberOfGatesWithoutNot();
-
-            bool a_correct = fitness.isCorrect(best_fitness);
-            bool b_correct = fitness.isCorrect(fitness_idx);
-
-            if (a_correct && b_correct)
-            {
-                if (size < best_size)
-                {
-                    best_fitness = fitness_idx;
-                    best_idx     = idx;
-                    best_size    = size;
-                }
-            }
-            else if (b_correct && !a_correct)
-            {
-                best_fitness = fitness_idx;
-                best_idx     = idx;
-                best_size    = size;
-            }
-            else if (!b_correct && !a_correct)
-            {
-                if (fitness_idx > best_fitness)
-                {
-                    best_fitness = fitness_idx;
-                    best_idx     = idx;
-                    best_size    = size;
-                }
-            }
-        }
-
-        return best_idx;
-    }
-
-    /**
-     * @brief Generates a random index in the range [0, size).
-     */
-    size_t randomIndex(size_t size)
-    {
-        std::uniform_int_distribution<size_t> dist(0, size - 1);
-        return dist(rng);
-    }
-
-    /**
-     * @brief Generates a random index in the range [0, size).
-     */
-    double randomDouble()
-    {
-        std::uniform_real_distribution<double> dist(0.0, 1.0);
-        return dist(rng);
-    }
-
-    /**
-     * @brief Prints statistics about the current population.
-     * @param population Vector of circuits in the current generation.
-     * @param fitness_results Corresponding fitness values for each circuit.
-     * @param generation Current generation number.
-     *
-     * Displays information such as gate count distribution, number of
-     * correct circuits, and the smallest correct circuit found.
-     */
-    void printGateStats(
-        std::vector<std::unique_ptr<CircuitT>> const& population,
-        std::vector<double> const& fitness_results,
-        FitnessFunction<CircuitT> const& fitness,
-        size_t generation)
-    {
-        std::map<size_t, size_t> size_distribution;
-        std::map<size_t, size_t> correct_size_distribution;
-
-        size_t total_gates   = 0;
-        size_t min_gates     = std::numeric_limits<size_t>::max();
-        size_t max_gates     = 0;
-        size_t correct_count = 0;
-
-        for (size_t i = 0; i < population.size(); ++i)
-        {
-            size_t gates = population[i]->getActualNumberOfGatesWithoutNot();
-            total_gates += gates;
-            min_gates = std::min(min_gates, gates);
-            max_gates = std::max(max_gates, gates);
-
-            size_distribution[gates]++;
-
-            if (fitness.isCorrect(fitness_results[i]))
-            {
-                correct_count++;
-                correct_size_distribution[gates]++;
-            }
-        }
-
-        std::cout << "\n--- Generation " << generation << " ---\n";
-        std::cout << "Population size: " << population.size() << "\n";
-        std::cout << "Gate count: min=" << min_gates << ", max=" << max_gates << "\n";
-        std::cout << "Correct circuits: " << correct_count << "/" << population.size() << "\n";
-
-        std::cout << "\nSize distribution (all circuits):\n";
-        for (auto const& [size, count] : size_distribution)
-        {
-            double percentage = 100.0 * count / population.size();
-            std::cout << "  " << size << " gates: " << count << " (" << percentage << "%)";
-
-            if (correct_size_distribution.count(size))
-            {
-                double correct_percentage = 100.0 * correct_size_distribution[size] / count;
-                std::cout << " - correct: " << correct_size_distribution[size] << " (" << correct_percentage << "%)";
-            }
-            std::cout << "\n";
-        }
-
-        size_t best_correct_size = std::numeric_limits<size_t>::max();
-        for (auto const& [size, count] : correct_size_distribution)
-        {
-            if (size < best_correct_size && count > 0)
-            {
-                best_correct_size = size;
-            }
-        }
-
-        if (best_correct_size < std::numeric_limits<size_t>::max())
-        {
-            std::cout << "\nBest correct circuit size: " << best_correct_size << " gates\n";
-        }
-
-        std::cout << "================================\n";
-    }
-
 public:
     /**
      * @brief Runs the genetic algorithm for circuit minimization.
@@ -405,6 +226,186 @@ public:
         }
 
         return std::move(best_circuit_ever);
+    }
+
+
+private:
+    std::mt19937 rng;
+
+    #ifdef CIRBO_ENABLE_SCATTER_STATS
+    void collectScatterStats(
+        std::vector<std::unique_ptr<CircuitT>> const& population,
+        FitnessFunction<CircuitT> const& fitness,
+        size_t generation)
+    {
+        std::ofstream out("scatter_gen_" + std::to_string(generation) + ".csv");
+
+        out << "size,ln_matches\n";
+
+        for (auto const& circuit : population)
+        {
+            size_t size = circuit->getActualNumberOfGatesWithoutNot();
+
+            size_t matches = fitness.getCorrectMatches(*circuit);
+
+            double ln_matches = std::log((double)matches + 1.0);
+
+            out << size << "," << ln_matches << "\n";
+        }
+
+        out.close();
+    }
+    #endif
+
+    /**
+     * @brief Selects an individual using tournament selection.
+     * @param fitness_results Vector containing fitness values of the population.
+     * @param population Current population of circuits.
+     * @param tournament_size Number of individuals participating in the tournament.
+     * @return Index of the selected individual in the population.
+     *
+     * The best individual is chosen based on correctness, circuit size,
+     * and fitness value depending on their validity.
+     */
+    size_t tournamentSelection(
+        std::vector<double> const& fitness_results,
+        std::vector<std::unique_ptr<CircuitT>> const& population,
+        FitnessFunction<CircuitT> const& fitness,
+        size_t tournament_size = 5)
+    {
+        size_t best_idx     = randomIndex(fitness_results.size());
+        double best_fitness = fitness_results[best_idx];
+        size_t best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
+
+        for (size_t i = 1; i < tournament_size; ++i)
+        {
+            size_t idx     = randomIndex(fitness_results.size());
+            double fitness_idx = fitness_results[idx];
+            size_t size    = population[idx]->getActualNumberOfGatesWithoutNot();
+
+            bool a_correct = fitness.isCorrect(best_fitness);
+            bool b_correct = fitness.isCorrect(fitness_idx);
+
+            if (a_correct && b_correct)
+            {
+                if (size < best_size)
+                {
+                    best_fitness = fitness_idx;
+                    best_idx     = idx;
+                    best_size    = size;
+                }
+            }
+            else if (b_correct && !a_correct)
+            {
+                best_fitness = fitness_idx;
+                best_idx     = idx;
+                best_size    = size;
+            }
+            else if (!b_correct && !a_correct)
+            {
+                if (fitness_idx > best_fitness)
+                {
+                    best_fitness = fitness_idx;
+                    best_idx     = idx;
+                    best_size    = size;
+                }
+            }
+        }
+
+        return best_idx;
+    }
+
+    /**
+     * @brief Generates a random index in the range [0, size).
+     */
+    size_t randomIndex(size_t size)
+    {
+        std::uniform_int_distribution<size_t> dist(0, size - 1);
+        return dist(rng);
+    }
+
+    /**
+     * @brief Generates a random index in the range [0, size).
+     */
+    double randomDouble()
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        return dist(rng);
+    }
+
+    /**
+     * @brief Prints statistics about the current population.
+     * @param population Vector of circuits in the current generation.
+     * @param fitness_results Corresponding fitness values for each circuit.
+     * @param generation Current generation number.
+     *
+     * Displays information such as gate count distribution, number of
+     * correct circuits, and the smallest correct circuit found.
+     */
+    void printGateStats(
+        std::vector<std::unique_ptr<CircuitT>> const& population,
+        std::vector<double> const& fitness_results,
+        FitnessFunction<CircuitT> const& fitness,
+        size_t generation)
+    {
+        std::map<size_t, size_t> size_distribution;
+        std::map<size_t, size_t> correct_size_distribution;
+
+        size_t total_gates   = 0;
+        size_t min_gates     = std::numeric_limits<size_t>::max();
+        size_t max_gates     = 0;
+        size_t correct_count = 0;
+
+        for (size_t i = 0; i < population.size(); ++i)
+        {
+            size_t gates = population[i]->getActualNumberOfGatesWithoutNot();
+            total_gates += gates;
+            min_gates = std::min(min_gates, gates);
+            max_gates = std::max(max_gates, gates);
+
+            size_distribution[gates]++;
+
+            if (fitness.isCorrect(fitness_results[i]))
+            {
+                correct_count++;
+                correct_size_distribution[gates]++;
+            }
+        }
+
+        std::cout << "\n--- Generation " << generation << " ---\n";
+        std::cout << "Population size: " << population.size() << "\n";
+        std::cout << "Gate count: min=" << min_gates << ", max=" << max_gates << "\n";
+        std::cout << "Correct circuits: " << correct_count << "/" << population.size() << "\n";
+
+        std::cout << "\nSize distribution (all circuits):\n";
+        for (auto const& [size, count] : size_distribution)
+        {
+            double percentage = 100.0 * count / population.size();
+            std::cout << "  " << size << " gates: " << count << " (" << percentage << "%)";
+
+            if (correct_size_distribution.count(size))
+            {
+                double correct_percentage = 100.0 * correct_size_distribution[size] / count;
+                std::cout << " - correct: " << correct_size_distribution[size] << " (" << correct_percentage << "%)";
+            }
+            std::cout << "\n";
+        }
+
+        size_t best_correct_size = std::numeric_limits<size_t>::max();
+        for (auto const& [size, count] : correct_size_distribution)
+        {
+            if (size < best_correct_size && count > 0)
+            {
+                best_correct_size = size;
+            }
+        }
+
+        if (best_correct_size < std::numeric_limits<size_t>::max())
+        {
+            std::cout << "\nBest correct circuit size: " << best_correct_size << " gates\n";
+        }
+
+        std::cout << "================================\n";
     }
 };
 }  // namespace cirbo::minimization::genetic
