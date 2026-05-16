@@ -2,9 +2,9 @@
 #define CIRBO_SEARCH_UTILS_RANDOM_HPP
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <random>
-#include <cstddef>
 
 namespace cirbo::utils
 {

@@ -32,10 +32,7 @@ public:
      * Initializes circuit metadata and precomputes output values
      * for all possible input combinations.
      */
-    FitnessFunction(
-        CircuitT const& circuit,
-        double correctness_weight = 1000.0,
-        double size_weight = 1.0)
+    FitnessFunction(CircuitT const& circuit, double correctness_weight = 1000.0, double size_weight = 1.0)
         : initial_circuit_size(circuit.getActualNumberOfGates())
         , inputs_amount(circuit.getInputGates().size())
         , outputs_amount(circuit.getOutputGates().size())
@@ -82,15 +79,13 @@ public:
             fitness = correctness * correctness_weight_;
         }
 
-        int64_t size_diff =
-            static_cast<int64_t>(initial_circuit_size)
-            - static_cast<int64_t>(current_size);
+        int64_t size_diff = static_cast<int64_t>(initial_circuit_size) - static_cast<int64_t>(current_size);
 
         double size_bonus = size_diff * size_weight_;
 
         validateFitnessModel(correctness, size_bonus);
 
-        fitness += size_bonus;        
+        fitness += size_bonus;
 
         return fitness;
     }
@@ -113,10 +108,7 @@ public:
         return correct_vectors;
     }
 
-    bool isCorrect(double fitness_value) const
-    {
-        return fitness_value >= correctness_weight_;
-    }
+    bool isCorrect(double fitness_value) const { return fitness_value >= correctness_weight_; }
 
 private:
     /**

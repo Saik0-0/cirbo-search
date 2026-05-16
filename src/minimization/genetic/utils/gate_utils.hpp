@@ -20,8 +20,8 @@ inline bool isValidArity(GateType type, std::vector<GateId> const& operands)
         return operands.size() == 1;
     }
 
-    if (type == GateType::AND || type == GateType::OR || type == GateType::XOR ||
-        type == GateType::NAND || type == GateType::NOR || type == GateType::NXOR)
+    if (type == GateType::AND || type == GateType::OR || type == GateType::XOR || type == GateType::NAND ||
+        type == GateType::NOR || type == GateType::NXOR)
     {
         return operands.size() == 2;
     }
@@ -29,4 +29,4 @@ inline bool isValidArity(GateType type, std::vector<GateId> const& operands)
     return true;
 }
 
-} // namespace cirbo::minimization::genetic
+}  // namespace cirbo::minimization::genetic

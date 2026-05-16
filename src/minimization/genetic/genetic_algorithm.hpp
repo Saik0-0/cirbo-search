@@ -1,8 +1,8 @@
 #pragma once
 
-#include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -31,7 +31,7 @@ struct GeneticParams
 
 struct GeneticConstants
 {
-    static constexpr size_t big_stats_period = 50;
+    static constexpr size_t big_stats_period   = 50;
     static constexpr size_t small_stats_period = 10;
 };
 
@@ -52,7 +52,7 @@ public:
     std::unique_ptr<CircuitT> run(CircuitT const& initial_circuit, GeneticParams const& parameters = GeneticParams{})
     {
         rng.seed(static_cast<std::mt19937::result_type>(parameters.seed));
-        
+
         std::cerr << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
 
         std::vector<std::unique_ptr<CircuitT>> population;
@@ -123,9 +123,9 @@ public:
             if (generation % GeneticConstants::big_stats_period == 0 || generation == 0)
             {
                 printGateStats(population, fitness_results, fitness, generation);
-                #ifdef CIRBO_ENABLE_SCATTER_STATS
+#ifdef CIRBO_ENABLE_SCATTER_STATS
                 collectScatterStats(population, fitness, generation);
-                #endif
+#endif
             }
             else if (generation % GeneticConstants::small_stats_period == 0)
             {
@@ -236,11 +236,10 @@ public:
         return std::move(best_circuit_ever);
     }
 
-
 private:
     std::mt19937 rng;
 
-    #ifdef CIRBO_ENABLE_SCATTER_STATS
+#ifdef CIRBO_ENABLE_SCATTER_STATS
     void collectScatterStats(
         std::vector<std::unique_ptr<CircuitT>> const& population,
         FitnessFunction<CircuitT> const& fitness,
@@ -263,7 +262,7 @@ private:
 
         out.close();
     }
-    #endif
+#endif
 
     /**
      * @brief Selects an individual using tournament selection.
@@ -283,15 +282,15 @@ private:
     {
         size_t best_idx     = randomIndex(fitness_results.size());
         double best_fitness = fitness_results[best_idx];
-        bool best_correct = fitness.isCorrect(best_fitness);
+        bool best_correct   = fitness.isCorrect(best_fitness);
         size_t best_size    = population[best_idx]->getActualNumberOfGatesWithoutNot();
 
         for (size_t i = 1; i < tournament_size; ++i)
         {
-            size_t idx     = randomIndex(fitness_results.size());
+            size_t idx         = randomIndex(fitness_results.size());
             double fitness_idx = fitness_results[idx];
-            size_t size    = population[idx]->getActualNumberOfGatesWithoutNot();
-            bool b_correct = fitness.isCorrect(fitness_idx);
+            size_t size        = population[idx]->getActualNumberOfGatesWithoutNot();
+            bool b_correct     = fitness.isCorrect(fitness_idx);
 
             if (best_correct && b_correct)
             {

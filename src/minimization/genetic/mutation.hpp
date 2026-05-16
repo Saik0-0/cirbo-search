@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "core/structures/mutable_circuit.hpp"
-#include "utils/random.hpp"
-#include "minimization/genetic/utils/gate_utils.hpp"
 #include "minimization/genetic/utils/circuit_utils.hpp"
+#include "minimization/genetic/utils/gate_utils.hpp"
+#include "utils/random.hpp"
 
 namespace cirbo::minimization::genetic
 {
@@ -42,12 +42,7 @@ void changeGateTypeMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     std::vector<GateType> possible_types = {
-        GateType::AND,
-        GateType::OR,
-        GateType::XOR,
-        GateType::NAND,
-        GateType::NOR,
-        GateType::NXOR};
+        GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR};
 
     GateType new_type = GateType::AND;
 
@@ -83,7 +78,7 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     size_t operand_index = utils::randomIndex(operands.size(), rng);
-    GateId old_operand = operands[operand_index];
+    GateId old_operand   = operands[operand_index];
 
     GateId new_operand = old_operand;
 
@@ -228,9 +223,7 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
 
     GateId existing_gate = randomGate(*circuit, rng);
 
-    std::vector<GateType> possible_types = {
-        GateType::AND,
-        GateType::NOT};
+    std::vector<GateType> possible_types = {GateType::AND, GateType::NOT};
 
     GateType new_type = possible_types[utils::randomIndex(possible_types.size(), rng)];
 
@@ -239,7 +232,7 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
     if (new_type == GateType::NOT)
     {
         GateId operand = randomOperand(*circuit, existing_gate, rng);
-        operands = {operand};
+        operands       = {operand};
     }
     else
     {
@@ -317,7 +310,7 @@ void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     auto operands = circuit->getGateOperands(gate);
-    auto type = circuit->getGateType(gate);
+    auto type     = circuit->getGateType(gate);
 
     for (auto op : operands)
     {
@@ -418,7 +411,7 @@ void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     GateId target_root = randomGate(*circuit, rng);
-    GateId donor_root = randomGate(*circuit, rng);
+    GateId donor_root  = randomGate(*circuit, rng);
 
     if (target_root == donor_root)
     {
@@ -477,7 +470,7 @@ void applyRandomMutation(CircuitT* circuit, std::mt19937& rng)
         return;
     }
 
-    using MutationFn = void(*)(CircuitT*, std::mt19937&);
+    using MutationFn = void (*)(CircuitT*, std::mt19937&);
 
     static MutationFn mutations[] = {
         changeGateTypeMutation<CircuitT>,
@@ -487,17 +480,13 @@ void applyRandomMutation(CircuitT* circuit, std::mt19937& rng)
         duplicateGateMutation<CircuitT>,
         removeRandomGateMutation<CircuitT>,
         changeOutputGateMutation<CircuitT>,
-        replaceSubtreeMutation<CircuitT>
-    };
+        replaceSubtreeMutation<CircuitT>};
 
-    std::uniform_int_distribution<int> dist(
-        0,
-        static_cast<int>(std::size(mutations)) - 1
-    );
+    std::uniform_int_distribution<int> dist(0, static_cast<int>(std::size(mutations)) - 1);
 
     int idx = dist(rng);
 
     mutations[idx](circuit, rng);
 }
 
-} // namespace cirbo::minimization::genetic
+}  // namespace cirbo::minimization::genetic

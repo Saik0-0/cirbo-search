@@ -287,7 +287,7 @@ private:
 protected:
     /**
      * @brief Recalculates the number of non-NOT gates in the circuit
-     * 
+     *
      * non_not_gate_count contains the number of all gates
      * whose type is different from GateType::NOT
      * @note Performs a full traversal of the internal gate container
@@ -628,7 +628,7 @@ public:
         {
             if (op == old_operand)
             {
-                op    = new_operand;
+                op = new_operand;
                 node.setOperands(std::move(operands));
                 gates.at(old_operand).removeIdFromUsers(gate_id, false);
                 gates.at(new_operand).addUser(gate_id);

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <random>
 #include <stack>
 #include <unordered_set>
 #include <vector>
-#include <random>
 
 #include "core/structures/mutable_circuit.hpp"
 #include "utils/random.hpp"
@@ -122,4 +122,4 @@ GateId randomOperand(CircuitT& circuit, size_t gate_id, std::mt19937& rng)
     return candidates[utils::randomIndex(candidates.size(), rng)];
 }
 
-} // namespace cirbo::minimization::genetic
+}  // namespace cirbo::minimization::genetic
