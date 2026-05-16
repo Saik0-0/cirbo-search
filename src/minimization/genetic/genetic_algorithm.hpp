@@ -72,10 +72,11 @@ public:
 
         size_t last_best_size = initial_circuit.getActualNumberOfGatesWithoutNot();
 
+        std::vector<double> fitness_results;
+        fitness_results.reserve(population.size());
         for (size_t generation = 0; generation < parameters.generations; ++generation)
         {
-            std::vector<double> fitness_results;
-            fitness_results.reserve(population.size());
+            fitness_results.clear();
 
             correct_count             = 0;
             size_t best_this_gen_size = std::numeric_limits<size_t>::max();
