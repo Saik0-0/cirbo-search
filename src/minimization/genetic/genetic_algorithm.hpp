@@ -56,7 +56,10 @@ public:
         std::cerr << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
 
         std::vector<std::unique_ptr<CircuitT>> population;
+        std::vector<std::unique_ptr<CircuitT>> new_population;
+
         population.reserve(parameters.population_size);
+        new_population.reserve(parameters.population_size);
 
         for (size_t i = 0; i < parameters.population_size; ++i)
         {
@@ -77,6 +80,7 @@ public:
         for (size_t generation = 0; generation < parameters.generations; ++generation)
         {
             fitness_results.clear();
+            new_population.clear();
 
             correct_count             = 0;
             size_t best_this_gen_size = std::numeric_limits<size_t>::max();
@@ -144,9 +148,6 @@ public:
                           << " | best_ever=" << best_size_ever << " | best_fit=" << current_best_fitness << "\n";
             }
 
-            std::vector<std::unique_ptr<CircuitT>> new_population;
-            new_population.reserve(parameters.population_size);
-
             size_t elite_count =
                 std::max(static_cast<size_t>(parameters.population_size * parameters.elite_rate), size_t(1));
 
@@ -205,7 +206,7 @@ public:
                 new_population.push_back(std::move(offspring));
             }
 
-            population = std::move(new_population);
+            population.swap(new_population);
         }
 
         std::cerr << "\n=== FINAL RESULT ===\n";
