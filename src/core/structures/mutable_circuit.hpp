@@ -492,6 +492,33 @@ public:
     }
 
     /**
+     * @brief Checks whether a gate exists in the circuit.
+     * @param id Identifier of the gate.
+     * @return true if the gate exists, false otherwise.
+     */
+    [[nodiscard]]
+    bool isGateExists(GateId id) const
+    {
+        return gates.contains(id);
+    }
+
+    /**
+     * @brief Checks whether a gate is an input gate.
+     * @param id Identifier of the gate.
+     * @return true if the gate is an input gate.
+     */
+    [[nodiscard]]
+    bool isInputGate(GateId id) const
+    {
+        if (!gates.contains(id))
+        {
+            return false;
+        }
+
+        return gates.at(id).getType() == GateType::INPUT;
+    }
+
+    /**
      * @brief Adds a new logic node to the circuit
      * @param g_type type of the new logic node
      * @param operands container of operands identifiers for the new node

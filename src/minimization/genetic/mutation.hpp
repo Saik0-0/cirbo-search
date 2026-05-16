@@ -7,208 +7,12 @@
 #include <vector>
 
 #include "core/structures/mutable_circuit.hpp"
+#include "utils/random.hpp"
+#include "minimization/genetic/utils/gate_utils.hpp"
+#include "minimization/genetic/utils/circuit_utils.hpp"
 
 namespace cirbo::minimization::genetic
 {
-
-/**
- * @brief Checks whether a gate exists in the circuit.
- * @param circuit Circuit instance.
- * @param id Identifier of the gate.
- * @return true if the gate exists, false otherwise.
- */
-template<class CircuitT>
-bool isGateExists(CircuitT& circuit, GateId id)
-{
-    try
-    {
-        circuit.getGateType(id);
-        return true;
-    }
-    catch (std::out_of_range const&)
-    {
-        return false;
-    }
-}
-
-/**
- * @brief Checks whether a gate is an input gate.
- * @param circuit Circuit instance.
- * @param gate Identifier of the gate.
- * @return true if the gate is an input gate.
- */
-template<class CircuitT>
-bool isInputGate(CircuitT& circuit, size_t gate)
-{
-    if (!isGateExists(circuit, gate))
-    {
-        return false;
-    }
-
-    return circuit.getGateType(gate) == GateType::INPUT;
-}
-
-/**
- * @brief Checks whether a node is reachable from another node.
- * @param circuit Circuit instance.
- * @param ancestor Starting gate in the traversal.
- * @param candidate Gate to check for reachability.
- * @return true if candidate is reachable from ancestor, false otherwise.
- *
- * Used to prevent creation of cycles in the circuit graph.
- */
-template<class CircuitT>
-bool isDescendant(CircuitT& circuit, GateId ancestor, GateId candidate)
-{
-    if (ancestor == candidate)
-    {
-        return true;
-    }
-
-    std::stack<GateId> stack;
-    std::unordered_set<GateId> visited;
-
-    stack.push(ancestor);
-
-    while (!stack.empty())
-    {
-        GateId current = stack.top();
-        stack.pop();
-
-        if (current == candidate)
-        {
-            return true;
-        }
-
-        if (!visited.insert(current).second)
-        {
-            continue;
-        }
-
-        if (!isGateExists(circuit, current))
-        {
-            continue;
-        }
-
-        for (GateId user_id : circuit.getGateUsers(current))
-        {
-            if (!visited.count(user_id))
-            {
-                stack.push(user_id);
-            }
-        }
-    }
-
-    return false;
-}
-
-/**
- * @brief Validates operand count for a given gate type.
- * @param type Type of the gate.
- * @param operands List of operands for the gate.
- * @return true if the operand count is valid for the gate type.
- */
-inline bool isValidArity(GateType type, std::vector<GateId> const& operands)
-{
-    if (type == GateType::NOT)
-    {
-        return operands.size() == 1;
-    }
-
-    if (type == GateType::AND || type == GateType::OR || type == GateType::XOR ||
-        type == GateType::NAND || type == GateType::NOR || type == GateType::NXOR)
-    {
-        return operands.size() == 2;
-    }
-
-    return true;
-}
-
-/**
- * @brief Generates a random index in range [0, size).
- * @param size Upper bound of the range.
- * @param rng Random generator.
- * @return Random index.
- */
-inline size_t randomIndex(size_t size, std::mt19937& rng)
-{
-    if (size == 0)
-    {
-        return 0;
-    }
-
-    std::uniform_int_distribution<size_t> dist(0, size - 1);
-    return dist(rng);
-}
-
-/**
- * @brief Generates a random floating point value in range [0.0, 1.0].
- * @param rng Random generator.
- * @return Random double value.
- */
-inline double randomDouble(std::mt19937& rng)
-{
-    std::uniform_real_distribution<double> dist(0.0, 1.0);
-    return dist(rng);
-}
-
-/**
- * @brief Selects a random non-input gate from the circuit.
- * @param circuit Circuit instance.
- * @param rng Random generator.
- * @return Identifier of a randomly selected gate.
- *
- * If no valid gate exists, returns 0.
- */
-template<class CircuitT>
-size_t randomGate(CircuitT& circuit, std::mt19937& rng)
-{
-    std::vector<GateId> valid;
-
-    for (GateId i = 0; i < circuit.getNumberOfGates(); ++i)
-    {
-        if (isGateExists(circuit, i) && !isInputGate(circuit, i))
-        {
-            valid.push_back(i);
-        }
-    }
-
-    if (valid.empty())
-    {
-        return 0;
-    }
-
-    return valid[randomIndex(valid.size(), rng)];
-}
-
-/**
- * @brief Selects a random operand candidate for a gate.
- * @param circuit Circuit instance.
- * @param gate_id Identifier of the gate whose operands are being chosen.
- * @param rng Random generator.
- * @return Identifier of a randomly selected valid operand gate.
- */
-template<class CircuitT>
-GateId randomOperand(CircuitT& circuit, size_t gate_id, std::mt19937& rng)
-{
-    std::vector<GateId> candidates;
-
-    for (GateId i = 0; i < gate_id; ++i)
-    {
-        if (isGateExists(circuit, i))
-        {
-            candidates.push_back(i);
-        }
-    }
-
-    if (candidates.empty())
-    {
-        return 0;
-    }
-
-    return candidates[randomIndex(candidates.size(), rng)];
-}
-
 /**
  * @brief Changes the type of a randomly selected gate.
  *
@@ -225,7 +29,7 @@ void changeGateTypeMutation(CircuitT* circuit, std::mt19937& rng)
 
     size_t gate = randomGate(*circuit, rng);
 
-    if (isInputGate(*circuit, gate))
+    if (circuit->isInputGate(gate))
     {
         return;
     }
@@ -266,7 +70,7 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
 
     size_t gate = randomGate(*circuit, rng);
 
-    if (isInputGate(*circuit, gate) || circuit->isOutputGate(gate))
+    if (circuit->isInputGate(gate) || circuit->isOutputGate(gate))
     {
         return;
     }
@@ -278,7 +82,7 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
         return;
     }
 
-    size_t operand_index = randomIndex(operands.size(), rng);
+    size_t operand_index = utils::randomIndex(operands.size(), rng);
     GateId old_operand = operands[operand_index];
 
     GateId new_operand = old_operand;
@@ -319,7 +123,7 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
 
     for (GateId user_id : users)
     {
-        if (!isGateExists(*circuit, user_id))
+        if (!circuit->isGateExists(user_id))
         {
             continue;
         }
@@ -354,7 +158,7 @@ void insertNotMutation(CircuitT* circuit, std::mt19937& rng)
 
     size_t gate = randomGate(*circuit, rng);
 
-    if (isInputGate(*circuit, gate))
+    if (circuit->isInputGate(gate))
     {
         return;
     }
@@ -366,7 +170,7 @@ void insertNotMutation(CircuitT* circuit, std::mt19937& rng)
         return;
     }
 
-    size_t operand_index = randomIndex(operands.size(), rng);
+    size_t operand_index = utils::randomIndex(operands.size(), rng);
 
     GateId target_operand = operands[operand_index];
 
@@ -393,7 +197,7 @@ void insertNotMutation(CircuitT* circuit, std::mt19937& rng)
 
     for (GateId user_id : users)
     {
-        if (isGateExists(*circuit, user_id) && user_id != new_gate_id)
+        if (circuit->isGateExists(user_id) && user_id != new_gate_id)
         {
             if (!isDescendant(*circuit, not_gate_id, user_id))
             {
@@ -428,7 +232,7 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
         GateType::AND,
         GateType::NOT};
 
-    GateType new_type = possible_types[randomIndex(possible_types.size(), rng)];
+    GateType new_type = possible_types[utils::randomIndex(possible_types.size(), rng)];
 
     std::vector<GateId> operands;
 
@@ -461,7 +265,7 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
 
     GateId new_gate_id = circuit->getNumberOfGates() - 1;
 
-    bool should_connect = randomDouble(rng) < 0.7;
+    bool should_connect = utils::randomDouble(rng) < 0.7;
 
     if (should_connect && circuit->getGateUsers(existing_gate).size() > 0)
     {
@@ -469,9 +273,9 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
 
         if (!users.empty())
         {
-            GateId random_user = users[randomIndex(users.size(), rng)];
+            GateId random_user = users[utils::randomIndex(users.size(), rng)];
 
-            if (!isGateExists(*circuit, random_user))
+            if (!circuit->isGateExists(random_user))
             {
                 return;
             }
@@ -507,7 +311,7 @@ void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng)
 
     size_t gate = randomGate(*circuit, rng);
 
-    if (isInputGate(*circuit, gate))
+    if (circuit->isInputGate(gate))
     {
         return;
     }
@@ -517,7 +321,7 @@ void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng)
 
     for (auto op : operands)
     {
-        if (!isGateExists(*circuit, op))
+        if (!circuit->isGateExists(op))
         {
             return;
         }
@@ -542,7 +346,7 @@ void removeRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
 
     size_t gate = randomGate(*circuit, rng);
 
-    if (isInputGate(*circuit, gate) || circuit->isOutputGate(gate))
+    if (circuit->isInputGate(gate) || circuit->isOutputGate(gate))
     {
         return;
     }
@@ -573,7 +377,7 @@ void changeOutputGateMutation(CircuitT* circuit, std::mt19937& rng)
 
     auto current_outputs = circuit->getOutputGates();
 
-    size_t output_index = randomIndex(current_outputs.size(), rng);
+    size_t output_index = utils::randomIndex(current_outputs.size(), rng);
 
     GateId old_output = current_outputs[output_index];
 
@@ -585,7 +389,7 @@ void changeOutputGateMutation(CircuitT* circuit, std::mt19937& rng)
     {
         GateId candidate = randomGate(*circuit, rng);
 
-        if (!circuit->isOutputGate(candidate) && !isInputGate(*circuit, candidate))
+        if (!circuit->isOutputGate(candidate) && !circuit->isInputGate(candidate))
         {
             new_output = candidate;
         }
@@ -621,12 +425,12 @@ void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
         return;
     }
 
-    if (!isGateExists(*circuit, target_root) || !isGateExists(*circuit, donor_root))
+    if (!circuit->isGateExists(target_root) || !circuit->isGateExists(donor_root))
     {
         return;
     }
 
-    if (isInputGate(*circuit, target_root))
+    if (circuit->isInputGate(target_root))
     {
         return;
     }
@@ -640,7 +444,7 @@ void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
 
     for (GateId user_id : users)
     {
-        if (!isGateExists(*circuit, user_id))
+        if (!circuit->isGateExists(user_id))
         {
             continue;
         }
