@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "core/structures/mutable_circuit.hpp"
+#include "crossover.hpp"
 #include "fitness.hpp"
 #include "mutation.hpp"
 #include "utils/random.hpp"
@@ -22,9 +23,10 @@ struct GeneticParams
     size_t generations     = 100;
     size_t population_size = 10;
 
-    double mutation_rate  = 0.8;
+    double mutation_rate = 0.0;
+    // double mutation_rate  = 0.8;
     double elite_rate     = 0.1;
-    double crossover_rate = 0.0;
+    double crossover_rate = 1.0;
 
     uint64_t seed = cirbo::utils::DefaultGlobalSeed;
 };
@@ -191,12 +193,40 @@ public:
                 new_population.push_back(std::make_unique<CircuitT>(*population[indices[i]]));
             }
 
+            // while (new_population.size() < parameters.population_size)
+            // {
+            //     size_t parent_idx;
+            //     parent_idx = tournamentSelection(fitness_results, population, fitness);
+
+            //     auto offspring = std::make_unique<CircuitT>(*population[parent_idx]);
+
+            //     if (randomDouble() < parameters.mutation_rate)
+            //     {
+            //         applyRandomMutation(offspring.get(), rng);
+            //     }
+
+            //     new_population.push_back(std::move(offspring));
+            // }
+
             while (new_population.size() < parameters.population_size)
             {
-                size_t parent_idx;
-                parent_idx = tournamentSelection(fitness_results, population, fitness);
+                size_t parent1_idx = tournamentSelection(fitness_results, population, fitness);
 
-                auto offspring = std::make_unique<CircuitT>(*population[parent_idx]);
+                std::unique_ptr<CircuitT> offspring;
+
+                bool do_crossover = randomDouble() < parameters.crossover_rate;
+
+                if (do_crossover)
+                {
+                    size_t parent2_idx = tournamentSelection(fitness_results, population, fitness);
+
+                    // std::cerr << "[GA] crossover selected\n";
+                    offspring = layerCrossover(*population[parent1_idx], *population[parent2_idx], rng);
+                }
+                else
+                {
+                    offspring = std::make_unique<CircuitT>(*population[parent1_idx]);
+                }
 
                 if (randomDouble() < parameters.mutation_rate)
                 {
