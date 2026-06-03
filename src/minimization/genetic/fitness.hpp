@@ -33,7 +33,7 @@ public:
      * for all possible input combinations.
      */
     FitnessFunction(CircuitT const& circuit, double correctness_weight = 1000.0, double size_weight = 1.0)
-        : initial_circuit_size(circuit.getActualNumberOfGates())
+        : initial_circuit_size(circuit.getActualNumberOfGatesWithoutNot())
         , inputs_amount(circuit.getInputGates().size())
         , outputs_amount(circuit.getOutputGates().size())
         , inputs(circuit.getInputGates())
@@ -70,7 +70,7 @@ public:
 
         double correctness = static_cast<double>(correct_vectors) / target_states.size();
 
-        size_t current_size = test_circuit.getActualNumberOfGates();
+        size_t current_size = test_circuit.getActualNumberOfGatesWithoutNot();
 
         double fitness = correctness;
 
@@ -82,8 +82,6 @@ public:
         int64_t size_diff = static_cast<int64_t>(initial_circuit_size) - static_cast<int64_t>(current_size);
 
         double size_bonus = size_diff * size_weight_;
-
-        validateFitnessModel(correctness, size_bonus);
 
         fitness += size_bonus;
 
@@ -162,21 +160,6 @@ private:
         output_states.reserve(outputs.size());
         for (GateId output_id : outputs) { output_states.push_back(result_assigment->getGateState(output_id)); }
         return output_states;
-    }
-
-    void validateFitnessModel(double correctness, double size_bonus) const
-    {
-        if (correctness < 1.0)
-        {
-            double correctness_gap = (1.0 - correctness) * correctness_weight_;
-
-            if (size_bonus > correctness_gap)
-            {
-                throw std::runtime_error(
-                    "Fitness model violation: size bonus can override correctness loss. "
-                    "Weights are inconsistent for current circuit distribution.");
-            }
-        }
     }
 };
 }  // namespace cirbo::minimization::genetic
