@@ -8,12 +8,14 @@
 #include <map>
 #include <memory>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "core/structures/mutable_circuit.hpp"
 #include "crossover.hpp"
 #include "fitness.hpp"
 #include "mutation.hpp"
+#include "utils/log_utils.hpp"
 #include "utils/random.hpp"
 
 namespace cirbo::minimization::genetic
@@ -55,23 +57,33 @@ public:
     {
         rng.seed(static_cast<std::mt19937::result_type>(parameters.seed));
 
+#ifdef CIRBO_ENABLE_GENETIC_LOGS
+        std::ofstream mutation_log("genetic_mutations.txt");
+#endif
+
         std::cerr << "Initial circuit size: " << initial_circuit.getActualNumberOfGatesWithoutNot() << " gates\n";
 
         std::vector<std::unique_ptr<CircuitT>> population;
         std::vector<std::unique_ptr<CircuitT>> new_population;
+        std::vector<std::vector<std::string>> population_histories;
+        std::vector<std::vector<std::string>> new_population_histories;
 
         population.reserve(parameters.population_size);
         new_population.reserve(parameters.population_size);
+        population_histories.reserve(parameters.population_size);
+        new_population_histories.reserve(parameters.population_size);
 
         for (size_t i = 0; i < parameters.population_size; ++i)
         {
             population.push_back(std::make_unique<CircuitT>(initial_circuit));
+            population_histories.emplace_back();
         }
 
         FitnessFunction<CircuitT> fitness(initial_circuit);
 
         std::unique_ptr<CircuitT> best_circuit_ever = std::make_unique<CircuitT>(initial_circuit);
         size_t best_size_ever                       = initial_circuit.getActualNumberOfGatesWithoutNot();
+        std::vector<std::string> best_history_ever;
 
         size_t correct_count = 0;
 
@@ -83,6 +95,7 @@ public:
         {
             fitness_results.clear();
             new_population.clear();
+            new_population_histories.clear();
 
             correct_count             = 0;
             size_t best_this_gen_size = std::numeric_limits<size_t>::max();
@@ -110,10 +123,41 @@ public:
             {
                 best_size_ever    = best_this_gen_size;
                 best_circuit_ever = std::make_unique<CircuitT>(*population[best_this_gen_idx]);
+                best_history_ever = population_histories[best_this_gen_idx];
 
                 std::cerr << "\n*** NEW BEST CORRECT CIRCUIT at gen " << generation << ": " << best_size_ever
                           << " gates ***\n";
                 std::cerr << "Improved from " << last_best_size << " gates\n";
+                std::cerr << "Change history:\n";
+#ifdef CIRBO_ENABLE_GENETIC_LOGS
+
+                if (mutation_log.is_open())
+                {
+                    mutation_log << "\n*** NEW BEST CORRECT CIRCUIT at gen " << generation << ": " << best_size_ever
+                                 << " gates ***\n";
+                    mutation_log << "Improved from " << last_best_size << " gates\n";
+                    mutation_log << "Change history:\n";
+                }
+                if (best_history_ever.empty())
+                {
+                    std::cerr << "  [0] initial circuit\n";
+                    if (mutation_log.is_open())
+                    {
+                        mutation_log << "  [0] initial circuit\n";
+                    }
+                }
+                else
+                {
+                    for (size_t step = 0; step < best_history_ever.size(); ++step)
+                    {
+                        std::cerr << "  [" << step + 1 << "] " << best_history_ever[step] << "\n";
+                        if (mutation_log.is_open())
+                        {
+                            mutation_log << "  [" << step + 1 << "] " << best_history_ever[step] << "\n";
+                        }
+                    }
+                }
+#endif
                 last_best_size = best_size_ever;
             }
 
@@ -191,28 +235,15 @@ public:
             for (size_t i = 0; i < elite_count && i < indices.size(); ++i)
             {
                 new_population.push_back(std::make_unique<CircuitT>(*population[indices[i]]));
+                new_population_histories.push_back(population_histories[indices[i]]);
             }
-
-            // while (new_population.size() < parameters.population_size)
-            // {
-            //     size_t parent_idx;
-            //     parent_idx = tournamentSelection(fitness_results, population, fitness);
-
-            //     auto offspring = std::make_unique<CircuitT>(*population[parent_idx]);
-
-            //     if (randomDouble() < parameters.mutation_rate)
-            //     {
-            //         applyRandomMutation(offspring.get(), rng);
-            //     }
-
-            //     new_population.push_back(std::move(offspring));
-            // }
-
+            
             while (new_population.size() < parameters.population_size)
             {
                 size_t parent1_idx = tournamentSelection(fitness_results, population, fitness);
 
                 std::unique_ptr<CircuitT> offspring;
+                std::vector<std::string> offspring_history = population_histories[parent1_idx];
 
                 bool do_crossover = randomDouble() < parameters.crossover_rate;
 
@@ -220,8 +251,35 @@ public:
                 {
                     size_t parent2_idx = tournamentSelection(fitness_results, population, fitness);
 
+                    offspring_history.push_back(
+                        "crossover selection: parent1_idx=" + std::to_string(parent1_idx)
+                        + ", parent2_idx=" + std::to_string(parent2_idx));
                     // std::cerr << "[GA] crossover selected\n";
-                    offspring = layerCrossover(*population[parent1_idx], *population[parent2_idx], rng);
+                    size_t const crossover_history_start = offspring_history.size();
+                    offspring = layerCrossoverV3(
+                        *population[parent1_idx],
+                        *population[parent2_idx],
+                        rng,
+                        &offspring_history);
+
+                    double const child_fitness = fitness.evaluateFitness(*offspring);
+                    bool const child_correct   = fitness.isCorrect(child_fitness);
+                    std::string const correctness_info =
+                        ", child_fitness=" + std::to_string(child_fitness)
+                        + ", child_correct=" + (child_correct ? std::string("true") : std::string("false"));
+
+                    std::string crossover_log_entry = "crossover_v3: status=unknown";
+                    if (offspring_history.size() > crossover_history_start)
+                    {
+                        crossover_log_entry = offspring_history.back();
+                        offspring_history.back() += correctness_info;
+                    }
+
+                    std::ofstream crossover_log("crossover_v3_logs.txt", std::ios::app);
+                    if (crossover_log.is_open())
+                    {
+                        crossover_log << crossover_log_entry << correctness_info << "\n";
+                    }
                 }
                 else
                 {
@@ -230,13 +288,15 @@ public:
 
                 if (randomDouble() < parameters.mutation_rate)
                 {
-                    applyRandomMutation(offspring.get(), rng);
+                    applyRandomMutation(offspring.get(), rng, &offspring_history);
                 }
 
                 new_population.push_back(std::move(offspring));
+                new_population_histories.push_back(std::move(offspring_history));
             }
 
             population.swap(new_population);
+            population_histories.swap(new_population_histories);
         }
 
         std::cerr << "\n=== FINAL RESULT ===\n";

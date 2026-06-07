@@ -4,51 +4,17 @@
 #include <memory>
 #include <random>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "core/structures/mutable_circuit.hpp"
 #include "minimization/genetic/utils/circuit_utils.hpp"
 #include "minimization/genetic/utils/gate_utils.hpp"
+#include "minimization/genetic/utils/log_utils.hpp"
 #include "utils/random.hpp"
 
 namespace cirbo::minimization::genetic
 {
-/**
- * @brief Changes the type of a randomly selected gate.
- *
- * Replaces the gate type with another compatible binary gate
- * while preserving the existing operands.
- */
-template<class CircuitT>
-void changeGateTypeMutation(CircuitT* circuit, std::mt19937& rng)
-{
-    if (circuit->getActualNumberOfGates() <= 1)
-    {
-        return;
-    }
-
-    size_t gate = randomGate(*circuit, rng);
-
-    if (circuit->isInputGate(gate))
-    {
-        return;
-    }
-
-    auto operands = circuit->getGateOperands(gate);
-
-    if (operands.size() != 2)
-    {
-        return;
-    }
-
-    std::vector<GateType> possible_types = {
-        GateType::AND, GateType::OR, GateType::XOR, GateType::NAND, GateType::NOR, GateType::NXOR};
-
-    GateType new_type = GateType::AND;
-
-    circuit->changeGateType(gate, new_type);
-}
-
 /**
  * @brief Reconnects one operand of a randomly selected gate.
  *
@@ -56,7 +22,7 @@ void changeGateTypeMutation(CircuitT* circuit, std::mt19937& rng)
  * while preventing cycles in the circuit.
  */
 template<class CircuitT>
-void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
+void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 1)
     {
@@ -135,6 +101,12 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
     {
         circuit->removeGate(gate);
     }
+
+    appendHistory(
+        history,
+        "reconnectOperand: gate " + std::to_string(gate) + ", operand[" + std::to_string(operand_index)
+            + "] " + std::to_string(old_operand) + " -> " + std::to_string(new_operand)
+            + ", rebuilt as gate " + std::to_string(new_gate_id) + " (" + gateTypeToString(type) + ")");
 }
 
 /**
@@ -144,7 +116,7 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng)
  * and reconnects the circuit to use the new node.
  */
 template<class CircuitT>
-void insertNotMutation(CircuitT* circuit, std::mt19937& rng)
+void insertNotMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 1)
     {
@@ -205,6 +177,12 @@ void insertNotMutation(CircuitT* circuit, std::mt19937& rng)
     {
         circuit->removeGate(gate);
     }
+
+    appendHistory(
+        history,
+        "insertNot: gate " + std::to_string(gate) + ", operand[" + std::to_string(operand_index)
+            + "] " + std::to_string(target_operand) + " -> NOT gate " + std::to_string(not_gate_id)
+            + ", rebuilt as gate " + std::to_string(new_gate_id) + " (" + gateTypeToString(type) + ")");
 }
 
 /**
@@ -214,7 +192,7 @@ void insertNotMutation(CircuitT* circuit, std::mt19937& rng)
  * With certain probability it may replace an operand in an existing user gate.
  */
 template<class CircuitT>
-void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
+void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 1)
     {
@@ -284,8 +262,21 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
             }
 
             circuit->replaceOperand(random_user, existing_gate, new_gate_id);
+
+            appendHistory(
+                history,
+                "addRandomGate: added gate " + std::to_string(new_gate_id) + " (" + gateTypeToString(new_type)
+                    + ") with operands " + gateIdContainerToString(operands)
+                    + ", rewired user " + std::to_string(random_user) + " from gate "
+                    + std::to_string(existing_gate));
+            return;
         }
     }
+
+    appendHistory(
+        history,
+        "addRandomGate: added gate " + std::to_string(new_gate_id) + " (" + gateTypeToString(new_type)
+            + ") with operands " + gateIdContainerToString(operands) + ", no user rewired");
 }
 
 /**
@@ -295,7 +286,7 @@ void addRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
  * as a randomly selected gate in the circuit.
  */
 template<class CircuitT>
-void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng)
+void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 1)
     {
@@ -321,6 +312,11 @@ void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     circuit->addGate(type, operands, false);
+
+    appendHistory(
+        history,
+        "duplicateGate: duplicated gate " + std::to_string(gate) + " as gate "
+            + std::to_string(circuit->getNumberOfGates() - 1) + " (" + gateTypeToString(type) + ")");
 }
 
 /**
@@ -330,7 +326,7 @@ void duplicateGateMutation(CircuitT* circuit, std::mt19937& rng)
  * and has no users in the circuit.
  */
 template<class CircuitT>
-void removeRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
+void removeRandomGateMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 1)
     {
@@ -352,6 +348,8 @@ void removeRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     circuit->removeGate(gate);
+
+    appendHistory(history, "removeRandomGate: removed gate " + std::to_string(gate));
 }
 
 /**
@@ -361,7 +359,7 @@ void removeRandomGateMutation(CircuitT* circuit, std::mt19937& rng)
  * with another valid non-input gate in the circuit.
  */
 template<class CircuitT>
-void changeOutputGateMutation(CircuitT* circuit, std::mt19937& rng)
+void changeOutputGateMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 1)
     {
@@ -394,6 +392,10 @@ void changeOutputGateMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     circuit->replaceOutput(old_output, new_output);
+
+    appendHistory(
+        history,
+        "changeOutputGate: output " + std::to_string(old_output) + " -> " + std::to_string(new_output));
 }
 
 /**
@@ -403,7 +405,7 @@ void changeOutputGateMutation(CircuitT* circuit, std::mt19937& rng)
  * randomly selected compatible gate, effectively swapping subgraphs.
  */
 template<class CircuitT>
-void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
+void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 3)
     {
@@ -434,6 +436,7 @@ void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
     }
 
     auto users = circuit->getGateUsers(target_root);
+    size_t replaced_edges = 0;
 
     for (GateId user_id : users)
     {
@@ -448,12 +451,18 @@ void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
         }
 
         circuit->replaceOperand(user_id, target_root, donor_root);
+        ++replaced_edges;
     }
 
     if (!circuit->isOutputGate(target_root) && !circuit->isGateHasUsers(target_root))
     {
         circuit->removeGate(target_root);
     }
+
+    appendHistory(
+        history,
+        "replaceSubtree: target " + std::to_string(target_root) + " <- donor " + std::to_string(donor_root)
+            + ", replaced " + std::to_string(replaced_edges) + " user edge(s)");
 }
 
 /**
@@ -463,17 +472,16 @@ void replaceSubtreeMutation(CircuitT* circuit, std::mt19937& rng)
  * and applies it to the circuit.
  */
 template<class CircuitT>
-void applyRandomMutation(CircuitT* circuit, std::mt19937& rng)
+void applyRandomMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::string>* history = nullptr)
 {
     if (circuit->getActualNumberOfGates() <= 3)
     {
         return;
     }
 
-    using MutationFn = void (*)(CircuitT*, std::mt19937&);
+    using MutationFn = void (*)(CircuitT*, std::mt19937&, std::vector<std::string>*);
 
     static MutationFn mutations[] = {
-        changeGateTypeMutation<CircuitT>,
         reconnectOperandMutation<CircuitT>,
         insertNotMutation<CircuitT>,
         addRandomGateMutation<CircuitT>,
@@ -486,7 +494,7 @@ void applyRandomMutation(CircuitT* circuit, std::mt19937& rng)
 
     int idx = dist(rng);
 
-    mutations[idx](circuit, rng);
+    mutations[idx](circuit, rng, history);
 }
 
 }  // namespace cirbo::minimization::genetic
