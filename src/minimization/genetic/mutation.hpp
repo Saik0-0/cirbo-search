@@ -78,7 +78,7 @@ void reconnectOperandMutation(CircuitT* circuit, std::mt19937& rng, std::vector<
         return;
     }
 
-    circuit->addGate(type, operands, was_output);
+    circuit->addGate(type, operands, false);
 
     GateId new_gate_id = circuit->getNumberOfGates() - 1;
 
@@ -158,9 +158,14 @@ void insertNotMutation(CircuitT* circuit, std::mt19937& rng, std::vector<std::st
         return;
     }
 
-    circuit->addGate(type, operands, was_output);
+    circuit->addGate(type, operands, false);
 
     GateId new_gate_id = circuit->getNumberOfGates() - 1;
+
+    if (was_output)
+    {
+        circuit->replaceOutput(gate, new_gate_id);
+    }
 
     for (GateId user_id : users)
     {
